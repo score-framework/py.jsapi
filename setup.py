@@ -17,6 +17,7 @@ setup(
     keywords='score framework web javascript rpc api',
     packages=['score.jsapi'],
     license='LGPL',
+    zip_safe=False,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
