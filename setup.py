@@ -8,7 +8,7 @@ with open(os.path.join(here, 'README.rst')) as f:
 
 setup(
     name='score.jsapi',
-    version='0.1.1',
+    version='0.1.2',
     description='Javascript API generator of The SCORE Framework',
     long_description=README,
     author='strg.at',
@@ -16,8 +16,9 @@ setup(
     url='http://score-framework.org',
     keywords='score framework web javascript rpc api',
     packages=['score.jsapi'],
-    license='LGPL',
+    namespace_packages=['score'],
     zip_safe=False,
+    license='LGPL',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
