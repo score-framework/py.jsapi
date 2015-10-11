@@ -24,7 +24,7 @@
 // the discretion of STRG.AT GmbH also the competent court, in whose district the
 // Licensee has his registered seat, an establishment or assets.
 
-define("%s", ["lib/score/oop", "lib/bluebird"], function(oop, BPromise) {
+define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], function(oop, excformat, BPromise) {
 
     var defer = function() {
         var resolve, reject;
@@ -155,28 +155,25 @@ define("%s", ["lib/score/oop", "lib/bluebird"], function(oop, BPromise) {
                 for (var i = 0; i < requests.length; i++) {
                     payload.push(requests[i].data);
                 }
-                return endpoint.send(payload).then(function(results) {
-                    for (var i = 0; i < requests.length; i++) {
-                        var success = results[0][i];
-                        var result = results[1][i];
+                return endpoint.send(payload).then(function(responses) {
+                    for (var i = 0; i < responses.length; i++) {
+                        var response = responses[i],
+                            success = response.success,
+                            result = response.result;
                         if (success) {
                             requests[i].resolve(result);
                         } else {
-                            if (result && result[2]) {
-                                var args = [];
+                            if (result && result.trace) {
+                                var args = ['Error in jsapi call', requests[i].data[0], '('];
                                 for (var j = 1; j < requests[i].data.length; j++) {
+                                    if (j != 1) {
+                                        args.push(',');
+                                    }
                                     args.push(requests[i].data[j]);
                                 }
-                                var msg = '\nTraceback (most recent call last):\n';
-                                for (var j = 0; j < result[2].length; j++) {
-                                    var frame = result[2][j];
-                                    msg += '  File "' + frame[0] +
-                                           '", line "' + frame[1] +
-                                           '", in ' + frame[2] + '\n';
-                                    msg += '    ' + frame[3] + '\n';
-                                }
-                                msg += '\n' + result[0] + ': ' + result[1] + '\n'
-                                console.error('Error in jsapi call', requests[i].data[0], args, msg);
+                                args.push(')');
+                                args.push("\n" + excformat(result));
+                                console.error.apply(console, args);
                             }
                             requests[i].reject(result);
                         }

@@ -29,7 +29,7 @@ import logging
 import os
 import sys
 import textwrap
-import traceback
+from score.js.exc2json import exc2json
 
 from score.init import (
     ConfigurationError, ConfiguredModule, parse_dotted_path,
@@ -204,29 +204,6 @@ class ConfiguredJsapiModule(ConfiguredModule):
         self.expose = expose
 
 
-def exc2json(excinfo):
-    """
-    Converts exception info (as returned by :func:`sys.exc_info`) into a
-    3-tuple that can be converted into a json string by python's :mod:`json`
-    library. It will consist of the exception name, the message and the stack
-    trace as provided by :meth:`traceback.extract_tb`::
-
-        ['ZeroDivisionError', 'division by zero', [<traceback>]]
-    """
-    try:
-        trace = traceback.extract_tb(excinfo[2])
-    except KeyError:
-        trace = None
-    else:
-        while trace and 'score/jsapi/__init__.py' in trace[0][0]:
-            trace = trace[1:]
-    return [
-        excinfo[0].__name__,
-        str(excinfo[1]),
-        trace,
-    ]
-
-
 class Endpoint:
     """
     An endpoint capable of handling requests from javascript.
@@ -278,7 +255,7 @@ class Endpoint:
             return True, self.ops[name](ctx, *arguments)
         except Exception as e:
             if self.conf.expose:
-                result = exc2json(sys.exc_info())
+                result = exc2json(sys.exc_info(), [__file__])
             elif isinstance(e, SafeException):
                 result = exc2json([type(e), str(e)])
             else:
@@ -327,7 +304,7 @@ class UrlEndpoint(Endpoint):
         "application/json"-encoded response to the calling javascript function.
         See the pyramid implementation for example usage of this function.
         """
-        results = [[], []]
+        responses = []
         for r in requests:
             name = r[0]
             args = r[1:]
@@ -335,9 +312,11 @@ class UrlEndpoint(Endpoint):
                 for member, value in ctx_members.items():
                     setattr(ctx, member, value)
                 success, result = self.call(ctx, name, args)
-            results[0].append(success)
-            results[1].append(result)
-        return results
+            responses.append({
+                'success': success,
+                'result': result,
+            })
+        return responses
 
     @property
     def _js_args(self):
