@@ -41,6 +41,8 @@ log = logging.getLogger(__name__)
 defaults = {
     'endpoints': [],
     'expose': False,
+    'virtjs.path': 'jsapi.js',
+    'virtjs.require': 'lib/score/jsapi',
 }
 
 
@@ -60,78 +62,104 @@ def init(confdict, ctx_conf, js_conf):
         value should be left at its default value in production, but may be
         switched to `True` during development to receive Exceptions and
         stacktraces in the browser console.
+
+    :confkey:`virtjs.path` :faint:`[default=jsapi.js]`
+        Path of the :term:`virtual javascript <virtual asset>` file.
+
+    :confkey:`virtjs.require` :faint:`[default=lib/score/jsapi]`
+        The name of the require.js module to create the virtual javascript with.
+        When left at its default value, the resulting javascript can be included
+        like the following:
+
+        .. code-block:: javascript
+
+            require(['lib/score/jsapi'], function(Api) {
+                var api = new Api();
+                // ... use api here ...
+            });
     """
     conf = dict(defaults.items())
     conf.update(confdict)
     endpoints = list(map(parse_dotted_path, parse_list(conf['endpoints'])))
     expose = parse_bool(conf['expose'])
 
-    @js_conf.virtjs('jsapi.js')
+    @js_conf.virtjs(conf['virtjs.path'])
     def api():
-        op_defs = []
-        op_funcs = []
-        ep_defs = []
-        for endpoint in endpoints:
+        return _gen_apijs(endpoints, conf['virtjs.require'])
+
+    jsapi_conf = ConfiguredJsapiModule(ctx_conf, endpoints, expose)
+    for endpoint in endpoints:
+        endpoint.conf = jsapi_conf
+    return jsapi_conf
+
+
+def _gen_apijs(endpoints, require_name):
+    """
+    Generates the :term:`virtual javascript <virtual asset>`.
+    """
+    op_defs = []
+    op_funcs = []
+    ep_defs = []
+    for endpoint in endpoints:
+        args = ''
+        if endpoint._js_args:
+            args = ', ' + ', '.join(endpoint._js_args)
+        ep_defs.append("new Endpoint.{type}('{name}'{args});".format(
+            name=endpoint.name, type=endpoint.type, args=args))
+        for funcname in sorted(endpoint.ops):
+            func = endpoint.ops[funcname]
+            minargs = 0
+            maxargs = 0
+            argnames = []
+            for name, param in inspect.signature(func).parameters.items():
+                if name == 'ctx':
+                    continue
+                argnames.append(name)
+                maxargs += 1
+                if param.default == inspect.Parameter.empty:
+                    minargs += 1
+            op_def = """
+                {name}: {0}
+                    name: "{name}",
+                    endpointId: "{endpoint}",
+                    minargs: {minargs},
+                    maxargs: {maxargs},
+                    argnames: [{argnames}],
+                {1}
+            """.format(
+                '{', '}', name=funcname, endpoint=endpoint.name,
+                minargs=minargs, maxargs=maxargs,
+                argnames=', '.join(map(lambda x: '"%s"' % x, argnames)))
+            op_defs.append(
+                textwrap.indent(textwrap.dedent(op_def).strip(), ' ' * 16))
+            doc = ''
+            if func.__doc__:
+                doc = textwrap.dedent(func.__doc__).strip()
+                doc = doc.replace('*/', '* /')
+                doc = doc.replace('\n', '\n *')
+                doc = '/**\n * %s\n */\n' % doc
             args = ''
-            if endpoint._js_args:
-                args = ', ' + ', '.join(endpoint._js_args)
-            ep_defs.append("new Endpoint.{type}('{name}'{args});".
-                format(name=endpoint.name, type=endpoint.type, args=args))
-            for funcname in sorted(endpoint.ops):
-                func = endpoint.ops[funcname]
-                minargs = 0
-                maxargs = 0
-                argnames = []
-                for name, param in inspect.signature(func).parameters.items():
-                    if name == 'ctx':
-                        continue
-                    argnames.append(name)
-                    maxargs += 1
-                    if param.default == inspect.Parameter.empty:
-                        minargs += 1
-                op_def = """
-                    {name}: {0}
-                        name: "{name}",
-                        endpointId: "{endpoint}",
-                        minargs: {minargs},
-                        maxargs: {maxargs},
-                        argnames: [{argnames}],
+            if argnames:
+                args = ', ' + ', '.join(argnames)
+            op_func = """
+                {name}: function(self{args}) {0}
+                    var args = [];
+                    for (var i = 1; i < arguments.length; i++) {0}
+                        args.push(arguments[i])
                     {1}
-                """.format(
-                    '{', '}', name=funcname, endpoint=endpoint.name,
-                    minargs=minargs, maxargs=maxargs,
-                    argnames=', '.join(map(lambda x: '"%s"' % x, argnames)))
-                op_defs.append(
-                    textwrap.indent(textwrap.dedent(op_def).strip(), ' ' * 16))
-                doc = ''
-                if func.__doc__:
-                    doc = textwrap.dedent(func.__doc__).strip()
-                    doc = doc.replace('*/', '* /')
-                    doc = doc.replace('\n', '\n *')
-                    doc = '/**\n * %s\n */\n' % doc
-                args = ''
-                if argnames:
-                    args = ', ' + ', '.join(argnames)
-                op_func = """
-                    {name}: function(self{args}) {0}
-                        var args = [];
-                        for (var i = 1; i < arguments.length; i++) {0}
-                            args.push(arguments[i])
-                        {1}
-                        var promise = self._call('{name}', args);
-                        self._flush();
-                        return promise;
-                    {1}
-                """.format('{', '}', doc=doc, name=funcname, args=args,
-                           argnames=', '.join(argnames))
-                op_funcs.append(
-                    textwrap.indent(doc, ' ' * 8) +
-                    textwrap.indent(textwrap.dedent(op_func).strip(), ' ' * 8))
-        op_defs = ',\n\n'.join(op_defs).strip()
-        op_funcs = ',\n\n'.join(op_funcs).strip()
-        ep_defs = ',\n\n'.join(ep_defs)
-        return api_tpl % (op_defs, op_funcs, ep_defs)
-    return ConfiguredJsapiModule(ctx_conf, endpoints, expose)
+                    var promise = self._call('{name}', args);
+                    self._flush();
+                    return promise;
+                {1}
+            """.format('{', '}', doc=doc, name=funcname, args=args,
+                       argnames=', '.join(argnames))
+            op_funcs.append(
+                textwrap.indent(doc, ' ' * 8) +
+                textwrap.indent(textwrap.dedent(op_func).strip(), ' ' * 8))
+    op_defs = ',\n\n'.join(op_defs).strip()
+    op_funcs = ',\n\n'.join(op_funcs).strip()
+    ep_defs = ',\n\n'.join(ep_defs)
+    return api_tpl % (require_name, op_defs, op_funcs, ep_defs)
 
 
 class ConfiguredJsapiModule(ConfiguredModule):
@@ -199,8 +227,34 @@ class Endpoint:
     def call(self, ctx, name, arguments):
         """
         Calls function with given *name* and the given `list` of *arguments*.
+
+        Will return a tuple consisting of a boolean success indicator and the
+        actual response. The response depends on two factors:
+
+        - If the call was successfull (i.e. no exception), it will contain the
+          return value of the function.
+        - If a non-safe exception was caught (i.e. one that does not derive from
+          :class:`SafeException`) and the module was configured to expose
+          internal data (via the init configuration value "expose"), the
+          response will consist of the json-convertible representation of the
+          exception, which is achievede with the help of :func:`exc2json`
+        - If a :class:`.SafeException` was caught and the module was configured
+          *not* to expose internal data, it will convert the exception type and
+          message only (again via :func:`exc2json`). Thus, the javascript part
+          will not receive a stack trace.
+        - The last case (non-safe exception, expose is `False`), the *result*
+          part will be `None`.
         """
-        return self.ops[name](ctx, *arguments)
+        try:
+            return True, self.ops[name](ctx, *arguments)
+        except Exception as e:
+            if self.conf.expose:
+                result = exc2json(sys.exc_info())
+            elif isinstance(e, SafeException):
+                result = exc2json([type(e), str(e)])
+            else:
+                result = None
+            return False, result
 
     @property
     def _js_args(self):
@@ -219,14 +273,9 @@ class UrlEndpoint(Endpoint):
         self.url = '/jsapi/' + name
         self.method = method
 
-    def handle(self, jsapi_conf, requests, *, Context=None):
+    def handle(self, requests, ctx_members={}):
         """
         Handles all functions calls passed with a request.
-
-        The function requires the :class:`configured score.jsapi module
-        <.ConfiguredJsapiModule>` as its *jsapi_conf* parameter. It will be used
-        to create Contexts for each request. It is possible to provide a
-        different *Context* class, though.
 
         The provided *requests* variable needs to be a list of "calls", where
         each call is a json-encoded list containing the function name as first
@@ -241,34 +290,22 @@ class UrlEndpoint(Endpoint):
 
             [[True, False], [42, None]]
 
-        If the module was configured to expose exception information, the `None`
-        value will instead be the exception info as provided by
-        :func:`exc2json`.
+        See :meth:`Endpoint.call` for details on the result values, especially
+        the explanation of the `None` value, above.
 
         The input and output is already in the correct format for communication
         with the javascript part, so the result can be sent as
         "application/json"-encoded response to the calling javascript function.
         See the pyramid implementation for example usage of this function.
         """
-        if not Context:
-            Context = jsapi_conf.ctx_conf.Context
         results = [[], []]
         for r in requests:
-            args = r[:]
-            try:
-                success = True
-                name = args[0]
-                args.pop(0)
-                with Context() as ctx:
-                    result = self.call(ctx, name, args)
-            except Exception as e:
-                success = False
-                if jsapi_conf.expose:
-                    result = exc2json(sys.exc_info())
-                elif isinstance(e, SafeException):
-                    result = exc2json([type(e), str(e)])
-                else:
-                    result = None
+            name = r[0]
+            args = r[1:]
+            with self.conf.ctx_conf.Context() as ctx:
+                for member, value in ctx_members.items():
+                    setattr(ctx, member, value)
+                success, result = self.call(ctx, name, args)
             results[0].append(success)
             results[1].append(result)
         return results

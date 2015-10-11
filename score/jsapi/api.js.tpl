@@ -24,7 +24,7 @@
 // the discretion of STRG.AT GmbH also the competent court, in whose district the
 // Licensee has his registered seat, an establishment or assets.
 
-define("lib/score/jsapi", ["lib/score/oop", "lib/bluebird"], function(oop, BPromise) {
+define("%s", ["lib/score/oop", "lib/bluebird"], function(oop, BPromise) {
 
     var defer = function() {
         var resolve, reject;

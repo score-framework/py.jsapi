@@ -52,11 +52,7 @@ def init(confdict, configurator, ctx_conf, js_conf):
                 requests = json.loads(str(request.body, request.charset))
             else:
                 requests = map(json.loads, request.GET.getall('requests[]'))
-            class Context(ctx_conf.Context):
-                def __init__(self, *args, **kwargs):
-                    self.request = request
-                    super().__init__(*args, **kwargs)
-            results = endpoint.handle(jsapi_conf, requests, Context=Context)
+            results = endpoint.handle(requests, {'request': request})
             request.response.content_encoding = 'UTF-8'
             request.response.content_type = 'application/json; charset=UTF-8'
             request.response.json = results
