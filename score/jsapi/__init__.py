@@ -32,7 +32,8 @@ import textwrap
 import traceback
 
 from score.init import (
-    ConfiguredModule, parse_dotted_path, parse_list, parse_bool)
+    ConfigurationError, ConfiguredModule, parse_dotted_path,
+    parse_list, parse_bool)
 
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,22 @@ def init(confdict, ctx_conf, js_conf):
     conf.update(confdict)
     endpoints = list(map(parse_dotted_path, parse_list(conf['endpoints'])))
     expose = parse_bool(conf['expose'])
+    for endpoint in endpoints:
+        for funcname in endpoint.ops:
+            if funcname in js_keywords:
+                raise ConfigurationError(
+                    __package__,
+                    'Exposed function `%s\'s name is '
+                    'a reserved keyword in javascript' %
+                    funcname)
+            func = endpoint.ops[funcname]
+            for name, param in inspect.signature(func).parameters.items():
+                if name in js_keywords:
+                    raise ConfigurationError(
+                        __package__,
+                        'Exposed function `%s\' has parameter `%s\', which is '
+                        'a reserved keyword in javascript' %
+                        (funcname, name))
 
     @js_conf.virtjs(conf['virtjs.path'])
     def api():
@@ -91,6 +108,18 @@ def init(confdict, ctx_conf, js_conf):
     for endpoint in endpoints:
         endpoint.conf = jsapi_conf
     return jsapi_conf
+
+
+js_keywords = (
+    'abstract', 'arguments', 'boolean', 'break', 'byte', 'case', 'catch',
+    'char', 'class*', 'const', 'continue', 'debugger', 'default', 'delete',
+    'do', 'double', 'else', 'enum*', 'eval', 'export*', 'extends*', 'false',
+    'final', 'finally', 'float', 'for', 'function', 'goto', 'if', 'implements',
+    'import*', 'in', 'instanceof', 'int', 'interface', 'let', 'long', 'native',
+    'new', 'null', 'package', 'private', 'protected', 'public', 'return',
+    'short', 'static', 'super*', 'switch', 'synchronized', 'this', 'throw',
+    'throws', 'transient', 'true', 'try', 'typeof', 'var', 'void', 'volatile',
+    'while', 'with', 'yield',)
 
 
 def _gen_apijs(endpoints, require_name):
