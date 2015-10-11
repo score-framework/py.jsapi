@@ -255,6 +255,6 @@ define("lib/score/jsapi", ["lib/score/oop", "lib/bluebird"], function(oop, BProm
 
     %s
 
-    return new JsApi();
+    return JsApi;
 
 });
