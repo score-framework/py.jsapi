@@ -92,7 +92,7 @@ def init(confdict, ctx_conf, js_conf):
                     'a reserved keyword in javascript' %
                     funcname)
             func = endpoint.ops[funcname]
-            for name, param in inspect.signature(func).parameters.items():
+            for name in inspect.signature(func).parameters:
                 if name in js_keywords:
                     raise ConfigurationError(
                         __package__,
@@ -180,8 +180,7 @@ def _gen_apijs(endpoints, require_name):
                     self._flush();
                     return promise;
                 {1}
-            """.format('{', '}', doc=doc, name=funcname, args=args,
-                       argnames=', '.join(argnames))
+            """.format('{', '}', name=funcname, args=args)
             op_funcs.append(
                 textwrap.indent(doc, ' ' * 8) +
                 textwrap.indent(textwrap.dedent(op_func).strip(), ' ' * 8))
@@ -230,9 +229,12 @@ class Endpoint:
         self.ops[name] = func
         return func
 
-    def call(self, ctx, name, arguments):
+    def call(self, name, arguments, ctx_members={}):
         """
         Calls function with given *name* and the given `list` of *arguments*.
+
+        It is also possible to set some :term:`context members <context member>`
+        before calling the actual handler for the operation.
 
         Will return a tuple consisting of a boolean success indicator and the
         actual response. The response depends on two factors:
@@ -252,7 +254,10 @@ class Endpoint:
           part will be `None`.
         """
         try:
-            return True, self.ops[name](ctx, *arguments)
+            with self.conf.ctx_conf.Context() as ctx:
+                for member, value in ctx_members.items():
+                    setattr(ctx, member, value)
+                return True, self.ops[name](ctx, *arguments)
         except Exception as e:
             if self.conf.expose:
                 result = exc2json(sys.exc_info(), [__file__])
@@ -308,10 +313,7 @@ class UrlEndpoint(Endpoint):
         for r in requests:
             name = r[0]
             args = r[1:]
-            with self.conf.ctx_conf.Context() as ctx:
-                for member, value in ctx_members.items():
-                    setattr(ctx, member, value)
-                success, result = self.call(ctx, name, args)
+            success, result = self.call(name, args, ctx_members=ctx_members)
             responses.append({
                 'success': success,
                 'result': result,
