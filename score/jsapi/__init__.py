@@ -186,7 +186,7 @@ def _gen_apijs(endpoints, require_name):
                 textwrap.indent(textwrap.dedent(op_func).strip(), ' ' * 8))
     op_defs = ',\n\n'.join(op_defs).strip()
     op_funcs = ',\n\n'.join(op_funcs).strip()
-    ep_defs = ',\n\n'.join(ep_defs)
+    ep_defs = '\n\n'.join(ep_defs)
     return api_tpl % (require_name, op_defs, op_funcs, ep_defs)
 
 
