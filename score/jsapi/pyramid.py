@@ -46,17 +46,22 @@ def init(confdict, configurator, ctx_conf, js_conf):
             continue
         name = endpoint.name
         route_name = 'score.jsapi:' + name
-        def api(request):
-            if endpoint.method == "POST":
-                assert request.content_type == 'application/json'
-                requests = json.loads(str(request.body, request.charset))
-            else:
-                requests = map(json.loads, request.GET.getall('requests[]'))
-            results = endpoint.handle(requests, {'request': request})
-            request.response.content_encoding = 'UTF-8'
-            request.response.content_type = 'application/json; charset=UTF-8'
-            request.response.json = results
-            return request.response
+        api = _make_api(endpoint)
         configurator.add_route(route_name, endpoint.url)
         configurator.add_view(api, route_name=route_name)
     return jsapi_conf
+
+
+def _make_api(endpoint):
+    def api(request):
+        if endpoint.method == "POST":
+            assert request.content_type == 'application/json'
+            requests = json.loads(str(request.body, request.charset))
+        else:
+            requests = map(json.loads, request.GET.getall('requests[]'))
+        results = endpoint.handle(requests, {'request': request})
+        request.response.content_encoding = 'UTF-8'
+        request.response.content_type = 'application/json; charset=UTF-8'
+        request.response.json = results
+        return request.response
+    return api
