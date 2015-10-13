@@ -8,7 +8,7 @@ with open(os.path.join(here, 'README.rst')) as f:
 
 setup(
     name='score.jsapi',
-    version='0.1.6',
+    version='0.1.7',
     description='Javascript API generator of The SCORE Framework',
     long_description=README,
     author='strg.at',
