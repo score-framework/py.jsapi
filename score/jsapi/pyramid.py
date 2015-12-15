@@ -60,7 +60,6 @@ def _make_api(endpoint):
         else:
             requests = map(json.loads, request.GET.getall('requests[]'))
         results = endpoint.handle(requests, {'request': request})
-        request.response.content_encoding = 'UTF-8'
         request.response.content_type = 'application/json; charset=UTF-8'
         request.response.json = results
         return request.response
