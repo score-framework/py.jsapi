@@ -29,6 +29,7 @@ import logging
 import os
 import sys
 import textwrap
+import time
 from score.js.exc2json import exc2json
 
 from score.init import (
@@ -313,7 +314,16 @@ class UrlEndpoint(Endpoint):
         for r in requests:
             name = r[0]
             args = r[1:]
+            if log.isEnabledFor(logging.DEBUG):
+                start = time.time()
             success, result = self.call(name, args, ctx_members=ctx_members)
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'Handled call to `%s` in %dms: %s',
+                    name,
+                    1000 * (time.time() - start),
+                    'success' if success else 'error',
+                )
             responses.append({
                 'success': success,
                 'result': result,
