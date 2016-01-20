@@ -106,7 +106,7 @@ def init(confdict, ctx, js, http):
         http.newroute('score.jsapi:' + name, endpoint.url)(api)
 
     @js.virtjs(conf['virtjs.path'])
-    def api():
+    def api(ctx):
         return _gen_apijs(endpoints, conf['virtjs.require'])
 
     jsapi = ConfiguredJsapiModule(ctx, endpoints, expose)
