@@ -15,7 +15,7 @@ setup(
     author_email='score@strg.at',
     url='http://score-framework.org',
     keywords='score framework web javascript rpc api',
-    packages=['score.jsapi'],
+    packages=['score', 'score.jsapi'],
     namespace_packages=['score'],
     package_dir={
         'score.jsapi': 'score/jsapi',
