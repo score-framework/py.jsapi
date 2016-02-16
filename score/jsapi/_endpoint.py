@@ -63,6 +63,8 @@ class Endpoint:
                     setattr(ctx, member, value)
                 return True, self.ops[name](ctx, *arguments)
         except Exception as e:
+            if not isinstance(e, SafeException):
+                log.exception(e)
             if self.conf.expose:
                 result = exc2json(sys.exc_info(), [__file__])
             elif isinstance(e, SafeException):
