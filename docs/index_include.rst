@@ -58,10 +58,3 @@ Configuration
     .. automethod:: handle
 
 .. autoclass:: SafeException
-
-Pyramid Integration
-===================
-
-.. module:: score.jsapi.pyramid
-
-.. autofunction:: init
