@@ -42,12 +42,12 @@ log = logging.getLogger(__name__)
 defaults = {
     'endpoints': [],
     'expose': False,
+    'js.require': 'lib/score/jsapi',
     'virtjs.path': 'jsapi.js',
-    'virtjs.require': 'lib/score/jsapi',
 }
 
 
-def init(confdict, ctx, js, http):
+def init(confdict, ctx, http, js=None):
     """
     Initializes this module acoording to :ref:`our module initialization
     guidelines <module_initialization>` with the following configuration keys:
@@ -64,10 +64,7 @@ def init(confdict, ctx, js, http):
         switched to `True` during development to receive Exceptions and
         stacktraces in the browser console.
 
-    :confkey:`virtjs.path` :faint:`[default=jsapi.js]`
-        Path of the :term:`virtual javascript <virtual asset>` file.
-
-    :confkey:`virtjs.require` :faint:`[default=lib/score/jsapi]`
+    :confkey:`js.require` :faint:`[default=lib/score/jsapi]`
         The name of the require.js module to create the virtual javascript with.
         When left at its default value, the resulting javascript can be included
         like the following:
@@ -78,6 +75,9 @@ def init(confdict, ctx, js, http):
                 var api = new Api();
                 // ... use api here ...
             });
+
+    :confkey:`virtjs.path` :faint:`[default=jsapi.js]`
+        Path of the :term:`virtual javascript <virtual asset>` file.
     """
     conf = dict(defaults.items())
     conf.update(confdict)
@@ -105,13 +105,16 @@ def init(confdict, ctx, js, http):
         api = _make_api(endpoint)
         http.newroute('score.jsapi:' + name, endpoint.url)(api)
 
-    @js.virtjs(conf['virtjs.path'])
-    def api(ctx):
-        return _gen_apijs(endpoints, conf['virtjs.require'])
-
-    jsapi = ConfiguredJsapiModule(ctx, endpoints, expose)
+    jsapi = ConfiguredJsapiModule(ctx, endpoints, expose,
+                                  conf['js.require'])
     for endpoint in endpoints:
         endpoint.conf = jsapi
+
+    if js:
+        @js.virtjs(conf['virtjs.path'])
+        def api(ctx):
+            return jsapi.generate_js()
+
     return jsapi
 
 
@@ -217,11 +220,17 @@ class ConfiguredJsapiModule(ConfiguredModule):
     <score.init.ConfiguredModule>`.
     """
 
-    def __init__(self, ctx_conf, endpoints, expose):
+    def __init__(self, ctx_conf, endpoints, expose, require_name):
         super().__init__(__package__)
         self.ctx_conf = ctx_conf
         self.endpoints = endpoints
         self.expose = expose
+        self.require_name = require_name
+
+    def generate_js(self):
+        if not hasattr(self, '__generated_js'):
+            self.__generated_js = _gen_apijs(self.endpoints, self.require_name)
+        return self.__generated_js
 
 
 here = os.path.abspath(os.path.dirname(__file__))
