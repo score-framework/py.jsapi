@@ -31,7 +31,7 @@ The functions exposed this way can be easily accessed in javascript:
 
     require('lib/score/jsapi', function(api) {
         api.add(40, 2).then(function(result) {
-            console.log('40 + 2 = ' + result)
+            console.log('40 + 2 = ' + result);
         });
     });
 

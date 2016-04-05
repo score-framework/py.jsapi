@@ -169,7 +169,7 @@ class SafeException(Exception):
         api.divide(1, 0).then(function(result) {
             console.log('1 / 0 = ' + result);
         }).catch(function(msg) {
-            console.error('Error (' + msg[0] + '): +  msg[1]);
+            console.error('Error (' + msg[0] + '): ' + msg[1]);
             // will output:
             //   Error (ZeroDivision): Cannot divide by zero
         });
