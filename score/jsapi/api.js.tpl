@@ -93,7 +93,7 @@ define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], functi
                     for (var i = 0; i < requests.length; i++) {
                         data.push('requests[]=' + encodeURIComponent(JSON.stringify(requests[i])));
                     }
-                    request.open('GET', self.url + data.join('&'));
+                    request.open('GET', self.url + '?' + data.join('&'));
                     request.send();
                 } else {
                     request.open(self.method, self.url);
