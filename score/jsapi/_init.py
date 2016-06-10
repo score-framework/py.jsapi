@@ -198,7 +198,7 @@ def _gen_apijs(endpoints, require_name):
                 {name}: function(self{args}) {0}
                     var args = [];
                     for (var i = 1; i < arguments.length; i++) {0}
-                        args.push(arguments[i])
+                        args.push(arguments[i]);
                     {1}
                     var promise = self._call('{name}', args);
                     self._flush();
