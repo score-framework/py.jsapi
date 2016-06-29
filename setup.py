@@ -42,6 +42,5 @@ setup(
     install_requires=[
         'score.init >= 0.3',
         'score.ctx >= 0.3',
-        'score.js >= 0.2.3',
     ],
 )
