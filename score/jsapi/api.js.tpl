@@ -24,7 +24,7 @@
 // the discretion of STRG.AT GmbH also the competent court, in whose district the
 // Licensee has his registered seat, an establishment or assets.
 
-define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], function(oop, excformat, BPromise) {
+define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], function(BPromise, excformat, score) {
 
     var defer = function() {
         var resolve, reject;
@@ -39,7 +39,7 @@ define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], functi
         };
     };
 
-    var Endpoint = oop.Class({
+    var Endpoint = score.oop.Class({
         __name__: 'JsApi__Endpoint',
 
         __static__: {
@@ -63,7 +63,7 @@ define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], functi
 
     });
 
-    Endpoint.URL = oop.Class({
+    Endpoint.URL = score.oop.Class({
         __name__: 'JsApi__Endpoint__URL',
         __parent__: Endpoint,
 
@@ -105,7 +105,7 @@ define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], functi
 
     });
 
-    var Queue = oop.Class({
+    var Queue = score.oop.Class({
         __name__: 'JsApi__Queue',
 
         __init__: function(self) {
@@ -198,7 +198,7 @@ define("%s", ["lib/score/oop", "lib/score/js/excformat", "lib/bluebird"], functi
 
     });
 
-    var JsApi = oop.Class({
+    var JsApi = score.oop.Class({
         __name__: 'JsApi',
 
         __static__: {

@@ -42,12 +42,11 @@ log = logging.getLogger(__name__)
 defaults = {
     'endpoints': [],
     'expose': False,
-    'js.require': 'lib/score/jsapi',
-    'virtjs.path': 'jsapi.js',
+    'jslib.require': 'lib/score/jsapi',
 }
 
 
-def init(confdict, ctx, http, js=None):
+def init(confdict, ctx, http, jslib=None):
     """
     Initializes this module acoording to :ref:`our module initialization
     guidelines <module_initialization>` with the following configuration keys:
@@ -64,20 +63,17 @@ def init(confdict, ctx, http, js=None):
         switched to `True` during development to receive Exceptions and
         stacktraces in the browser console.
 
-    :confkey:`js.require` :faint:`[default=lib/score/jsapi]`
+    :confkey:`jslib.require` :faint:`[default=score.jsapi]`
         The name of the require.js module to create the virtual javascript with.
         When left at its default value, the resulting javascript can be included
         like the following:
 
         .. code-block:: javascript
 
-            require(['lib/score/jsapi'], function(Api) {
+            require(['score.jsapi'], function(Api) {
                 var api = new Api();
                 // ... use api here ...
             });
-
-    :confkey:`virtjs.path` :faint:`[default=jsapi.js]`
-        Path of the :term:`virtual javascript <virtual asset>` file.
     """
     conf = dict(defaults.items())
     conf.update(confdict)
@@ -106,12 +102,15 @@ def init(confdict, ctx, http, js=None):
         http.newroute('score.jsapi:' + name, endpoint.url)(api)
 
     jsapi = ConfiguredJsapiModule(ctx, endpoints, expose,
-                                  conf['js.require'])
+                                  conf['jslib.require'])
     for endpoint in endpoints:
         endpoint.conf = jsapi
 
-    if js:
-        @js.virtjs(conf['virtjs.path'])
+    if jslib:
+        import score.jsapi
+
+        @jslib.virtlib(conf['jslib.require'], score.jsapi.__version__,
+                       ['bluebird', 'score.init', 'score.oop'])
         def api(ctx):
             return jsapi.generate_js()
 
@@ -198,7 +197,7 @@ def _gen_apijs(endpoints, require_name):
                 {name}: function(self{args}) {0}
                     var args = [];
                     for (var i = 1; i < arguments.length; i++) {0}
-                        args.push(arguments[i]);
+                        args.push(arguments[i])
                     {1}
                     var promise = self._call('{name}', args);
                     self._flush();
