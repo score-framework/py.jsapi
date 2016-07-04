@@ -29,7 +29,7 @@ import logging
 import os
 import textwrap
 import json
-from ._endpoint import UrlEndpoint
+from ._endpoint import UrlEndpoint, SafeException
 
 from score.init import (
     ConfigurationError, ConfiguredModule, parse_dotted_path,
@@ -149,6 +149,19 @@ def _gen_apijs(endpoints, require_name):
     """
     Generates the :term:`virtual javascript <virtual asset>`.
     """
+    def add_subclasses(cls):
+        for exc in cls.__subclasses__():
+            exc_def = """
+                exc.{name} = score.oop.Class({0}
+                    __name__: "{name}",
+                    __parent__: exc.{parent}
+                {1});
+            """.format('{', '}', name=exc.__name__, parent=cls.__name__)
+            exc_defs.append(
+                textwrap.indent(textwrap.dedent(exc_def).strip(), ' ' * 4))
+    exc_defs = []
+    add_subclasses(SafeException)
+    exc_defs = ';\n\n'.join(exc_defs).strip()
     op_defs = []
     op_funcs = []
     ep_defs = []
@@ -210,7 +223,7 @@ def _gen_apijs(endpoints, require_name):
     op_defs = ',\n\n'.join(op_defs).strip()
     op_funcs = ',\n\n'.join(op_funcs).strip()
     ep_defs = '\n\n'.join(ep_defs)
-    return api_tpl % (require_name, op_defs, op_funcs, ep_defs)
+    return api_tpl % (require_name, exc_defs, op_defs, op_funcs, ep_defs)
 
 
 class ConfiguredJsapiModule(ConfiguredModule):

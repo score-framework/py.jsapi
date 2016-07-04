@@ -39,6 +39,11 @@ define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], 
         };
     };
 
+    var SafeException = score.oop.Class({
+        __name__: 'SafeException',
+        __parent__: score.oop.Exception
+    });
+
     var Endpoint = score.oop.Class({
         __name__: 'JsApi__Endpoint',
 
@@ -108,9 +113,10 @@ define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], 
     var Queue = score.oop.Class({
         __name__: 'JsApi__Queue',
 
-        __init__: function(self) {
+        __init__: function(self, api) {
             self.queuedRequests = [];
             self.flushDeferred = null;
+            self.api = api;
         },
 
         queue: function(self, data, endpoint) {
@@ -175,6 +181,15 @@ define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], 
                                 args.push("\n" + excformat(result));
                                 console.error.apply(console, args);
                             }
+                            if (result) {
+                                if (result.type in self.api.exc) {
+                                    result = self.api.exc[result.type](result.message);
+                                } else {
+                                    result = new score.oop.Exception(result.message);
+                                }
+                            } else {
+                                result = new score.oop.Exception();
+                            }
                             requests[i].reject(result);
                         }
                     }
@@ -198,10 +213,20 @@ define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], 
 
     });
 
+    var exc = {
+
+        SafeException: SafeException
+
+    };
+
+    %s
+
     var JsApi = score.oop.Class({
         __name__: 'JsApi',
 
         __static__: {
+
+            exc: exc,
 
             ops: {
 
@@ -212,7 +237,7 @@ define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], 
         },
 
         __init__: function(self) {
-            self.queue = new Queue();
+            self.queue = new Queue(self);
         },
 
         _call: function(self, func, args) {
