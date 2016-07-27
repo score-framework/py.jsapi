@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 defaults = {
     'endpoints': [],
     'expose': False,
-    'jslib.require': 'lib/score/jsapi',
+    'jslib.require': 'score.jsapi',
 }
 
 
