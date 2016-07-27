@@ -27,6 +27,8 @@ class Endpoint:
         if name in self.ops:
             raise ValueError('Operation "%s" already registered' % name)
         for argname in inspect.signature(func).parameters:
+            if argname in ('self', 'cls'):
+                continue
             if argname != 'ctx':
                 raise ValueError("First argument must be the context 'ctx'")
             break
