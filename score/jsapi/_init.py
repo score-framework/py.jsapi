@@ -51,19 +51,19 @@ def init(confdict, ctx, http, jslib=None):
     Initializes this module acoording to :ref:`our module initialization
     guidelines <module_initialization>` with the following configuration keys:
 
-    :confkey:`endpoints` :faint:`[default=list()]`
+    :confkey:`endpoints` :confdefault:`list()`
         A :func:`list <score.init.parse_list>` of :func:`dotted paths
         <score.init.parse_dotted_path>` pointing to any amount of
         :class:`Endpoints <.Endpoint>`. The registered functions of these
         Endpoints will be available in javascript.
 
-    :confkey:`expose` :faint:`[default=False]`
+    :confkey:`expose` :confdefault:`False`
         Whether security critical data may be exposed through the API. This
         value should be left at its default value in production, but may be
         switched to `True` during development to receive Exceptions and
         stacktraces in the browser console.
 
-    :confkey:`jslib.require` :faint:`[default=score.jsapi]`
+    :confkey:`jslib.require` :confdefault:`score.jsapi`
         The name of the require.js module to create the virtual javascript with.
         When left at its default value, the resulting javascript can be included
         like the following:

@@ -1,6 +1,6 @@
 .. module:: score.jsapi
-.. role:: faint
 .. role:: confkey
+.. role:: confdefault
 
 ***********
 score.jsapi
