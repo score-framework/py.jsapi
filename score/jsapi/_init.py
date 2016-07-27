@@ -79,32 +79,9 @@ def init(confdict, ctx, http, jslib=None):
     conf.update(confdict)
     endpoints = list(map(parse_dotted_path, parse_list(conf['endpoints'])))
     expose = parse_bool(conf['expose'])
+    jsapi = ConfiguredJsapiModule(ctx, http, expose, conf['jslib.require'])
     for endpoint in endpoints:
-        for funcname in endpoint.ops:
-            if funcname in js_keywords:
-                raise ConfigurationError(
-                    __package__,
-                    'Exposed function `%s\'s name is '
-                    'a reserved keyword in javascript' %
-                    funcname)
-            func = endpoint.ops[funcname]
-            for name in inspect.signature(func).parameters:
-                if name in js_keywords:
-                    raise ConfigurationError(
-                        __package__,
-                        'Exposed function `%s\' has parameter `%s\', which is '
-                        'a reserved keyword in javascript' %
-                        (funcname, name))
-        if not isinstance(endpoint, UrlEndpoint):
-            continue
-        name = endpoint.name
-        api = _make_api(endpoint)
-        http.newroute('score.jsapi:' + name, endpoint.url)(api)
-
-    jsapi = ConfiguredJsapiModule(ctx, endpoints, expose,
-                                  conf['jslib.require'])
-    for endpoint in endpoints:
-        endpoint.conf = jsapi
+        jsapi.add_endpoint(endpoint)
 
     if jslib:
         import score.jsapi
@@ -232,12 +209,37 @@ class ConfiguredJsapiModule(ConfiguredModule):
     <score.init.ConfiguredModule>`.
     """
 
-    def __init__(self, ctx_conf, endpoints, expose, require_name):
+    def __init__(self, ctx_conf, http, endpoints, expose, require_name):
         super().__init__(__package__)
         self.ctx_conf = ctx_conf
+        self.http = http
         self.endpoints = endpoints
         self.expose = expose
         self.require_name = require_name
+
+    def add_endpoint(self, endpoint):
+        assert not self._finalized
+        for funcname in endpoint.ops:
+            if funcname in js_keywords:
+                raise ConfigurationError(
+                    __package__,
+                    'Exposed function `%s\'s name is '
+                    'a reserved keyword in javascript' %
+                    funcname)
+            func = endpoint.ops[funcname]
+            for name in inspect.signature(func).parameters:
+                if name in js_keywords:
+                    raise ConfigurationError(
+                        __package__,
+                        'Exposed function `%s\' has parameter `%s\', which is '
+                        'a reserved keyword in javascript' %
+                        (funcname, name))
+        self.endpoints.append(endpoint)
+        endpoint.conf = self
+        if isinstance(endpoint, UrlEndpoint):
+            name = endpoint.name
+            api = _make_api(endpoint)
+            self.http.newroute('score.jsapi:' + name, endpoint.url)(api)
 
     def generate_js(self):
         if not hasattr(self, '__generated_js'):
