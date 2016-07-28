@@ -210,12 +210,12 @@ class ConfiguredJsapiModule(ConfiguredModule):
     <score.init.ConfiguredModule>`.
     """
 
-    def __init__(self, ctx_conf, http, jslib, endpoints, expose, require_name):
+    def __init__(self, ctx_conf, http, jslib, expose, require_name):
         super().__init__(__package__)
         self.ctx_conf = ctx_conf
         self.http = http
         self.jslib = jslib
-        self.endpoints = endpoints
+        self.endpoints = []
         self.expose = expose
         self.require_name = require_name
 
