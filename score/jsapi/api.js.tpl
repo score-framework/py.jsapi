@@ -24,7 +24,7 @@
 // the discretion of STRG.AT GmbH also the competent court, in whose district the
 // Licensee has his registered seat, an establishment or assets.
 
-define("%s", ["bluebird", "lib/score/js/excformat", "score.init", "score.oop"], function(BPromise, excformat, score) {
+define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(excformat, BPromise, score) {
 
     var defer = function() {
         var resolve, reject;

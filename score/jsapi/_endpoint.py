@@ -1,6 +1,6 @@
 import inspect
 import logging
-from score.js.exc2json import exc2json
+from .exc2json import exc2json
 import sys
 import time
 

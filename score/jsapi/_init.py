@@ -30,6 +30,7 @@ import os
 import textwrap
 import json
 from ._endpoint import UrlEndpoint, SafeException
+from .exc2json import gen_excformat_js
 
 from score.init import (
     ConfigurationError, ConfiguredModule, parse_dotted_path,
@@ -87,8 +88,14 @@ def init(confdict, ctx, http, jslib=None):
     if jslib:
         import score.jsapi
 
+        @jslib.virtlib(conf['jslib.require'] + '/excformat',
+                       score.jsapi.__version__, [])
+        def exc2json(ctx):
+            return gen_excformat_js(ctx)
+
         @jslib.virtlib(conf['jslib.require'], score.jsapi.__version__,
-                       ['bluebird', 'score.init', 'score.oop'])
+                       [conf['jslib.require'] + '/excformat',
+                        'bluebird', 'score.init', 'score.oop'])
         def api(ctx):
             return jsapi.generate_js()
 
@@ -201,7 +208,8 @@ def _gen_apijs(endpoints, require_name):
     op_defs = ',\n\n'.join(op_defs).strip()
     op_funcs = ',\n\n'.join(op_funcs).strip()
     ep_defs = '\n\n'.join(ep_defs)
-    return api_tpl % (require_name, exc_defs, op_defs, op_funcs, ep_defs)
+    return api_tpl % (require_name, require_name,
+                      exc_defs, op_defs, op_funcs, ep_defs)
 
 
 class ConfiguredJsapiModule(ConfiguredModule):
