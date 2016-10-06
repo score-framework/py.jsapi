@@ -1,5 +1,6 @@
 import traceback
 import textwrap
+import json
 
 
 def exc2json(excinfo, untrace=[]):
@@ -37,14 +38,21 @@ def exc2json(excinfo, untrace=[]):
     }
 
 
-def gen_excformat_js(ctx):
+def gen_excformat_js(ctx, requirejs_name=None):
     """
     Generates a javascript function that can convert the return value of of a
     exc2json call to a human-readable stack trace. The resulting string will
     look a lot like the original python stack trace.
+
+    The returned javascript file contains a requirejs definition. It is possible
+    to set an explicit define name by passing a *requirejs_name* string.
     """
+    if requirejs_name:
+        requirejs_name = '%s, ' % json.dump(requirejs_name)
+    else:
+        requirejs_name = ''
     return textwrap.dedent('''
-        define(function() {
+        define(%sfunction() {
             return function excformat(exc) {
                 if (typeof exc.trace === 'undefined') {
                     return exc.type + ': ' + exc.message
@@ -61,4 +69,4 @@ def gen_excformat_js(ctx):
                 return msg;
             }
         });
-    ''').strip()
+    ''' % requirejs_name).strip()
