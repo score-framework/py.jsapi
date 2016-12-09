@@ -88,14 +88,19 @@ def init(confdict, ctx, http, jslib=None):
     if jslib:
         import score.jsapi
 
-        @jslib.virtlib(conf['jslib.require'] + '/excformat',
-                       score.jsapi.__version__, [])
+        version = score.jsapi.__version__
+        dependencies = {
+            conf['jslib.require'] + '/excformat': version,
+            'bluebird': '3.X.X',
+            'score.init': '0.X.X',
+            'score.oop': '0.4.X'
+        }
+
+        @jslib.virtlib(conf['jslib.require'] + '/excformat', version, {})
         def exc2json(ctx):
             return gen_excformat_js(ctx)
 
-        @jslib.virtlib(conf['jslib.require'], score.jsapi.__version__,
-                       [conf['jslib.require'] + '/excformat',
-                        'bluebird', 'score.init', 'score.oop'])
+        @jslib.virtlib(conf['jslib.require'], version, dependencies)
         def api(ctx):
             return jsapi.generate_js()
 
