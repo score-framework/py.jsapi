@@ -15,12 +15,12 @@ between javascript and python) and assigning exposed functions to them:
 
 .. code-block:: python
 
-    from jsapi import UrlEndpoint
+    from score.jsapi import UrlEndpoint
 
     math = UrlEndpoint('math')
 
     @math.op
-    def add(num1, num2):
+    def add(ctx, num1, num2):
         return num1 + num2
 
     jsapi.init({'endpoints': [math]})
@@ -29,7 +29,7 @@ The functions exposed this way can be easily accessed in javascript:
 
 .. code-block:: javascript
 
-    require('lib/score/jsapi', function(api) {
+    require('score.jsapi', function(api) {
         api.add(40, 2).then(function(result) {
             console.log('40 + 2 = ' + result);
         });
