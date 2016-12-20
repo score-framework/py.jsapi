@@ -193,6 +193,10 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
                             requests[i].reject(result);
                         }
                     }
+                }).catch(function(error) {
+                    for (var i = 0; i < requests.length; i++) {
+                        requests[i].reject(error);
+                    };
                 });
             };
             var promises = [];
