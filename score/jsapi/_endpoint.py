@@ -137,7 +137,8 @@ class UrlEndpoint(Endpoint):
         return responses
 
     def _js_args(self, conf):
-        return ['"%s"' % self.url, '"%s"' % self.method]
+        return ['"%s"' % self.conf.http.url(None, 'score.jsapi:' + self.name),
+                '"%s"' % self.method]
 
 
 class SafeException(Exception):
