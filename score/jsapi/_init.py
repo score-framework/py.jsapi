@@ -135,7 +135,7 @@ def _make_api(endpoint):
     return api
 
 
-def _gen_apijs(endpoints, require_name):
+def _gen_apijs(conf):
     """
     Generates the :term:`virtual javascript <virtual asset>`.
     """
@@ -155,12 +155,10 @@ def _gen_apijs(endpoints, require_name):
     op_defs = []
     op_funcs = []
     ep_defs = []
-    for endpoint in endpoints:
-        args = ''
-        if endpoint._js_args:
-            args = ', ' + ', '.join(endpoint._js_args)
-        ep_defs.append("new Endpoint.{type}('{name}'{args});".format(
-            name=endpoint.name, type=endpoint.type, args=args))
+    for endpoint in conf.endpoints:
+        args = ["'%s'" % endpoint.name] + endpoint._js_args(conf)
+        ep_defs.append("new Endpoint.{type}({args});".format(
+            type=endpoint.type, args=', '.join(args)))
         for funcname in sorted(endpoint.ops):
             func = endpoint.ops[funcname]
             minargs = 0
@@ -213,7 +211,7 @@ def _gen_apijs(endpoints, require_name):
     op_defs = ',\n\n'.join(op_defs).strip()
     op_funcs = ',\n\n'.join(op_funcs).strip()
     ep_defs = '\n\n'.join(ep_defs)
-    return api_tpl % (require_name, require_name,
+    return api_tpl % (conf.require_name, conf.require_name,
                       exc_defs, op_defs, op_funcs, ep_defs)
 
 
@@ -258,7 +256,7 @@ class ConfiguredJsapiModule(ConfiguredModule):
 
     def generate_js(self):
         if not hasattr(self, '__generated_js'):
-            self.__generated_js = _gen_apijs(self.endpoints, self.require_name)
+            self.__generated_js = _gen_apijs(self)
         return self.__generated_js
 
 

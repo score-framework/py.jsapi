@@ -75,8 +75,7 @@ class Endpoint:
                 result = None
             return False, result
 
-    @property
-    def _js_args(self):
+    def _js_args(self, conf):
         return []
 
 
@@ -137,8 +136,7 @@ class UrlEndpoint(Endpoint):
             })
         return responses
 
-    @property
-    def _js_args(self):
+    def _js_args(self, conf):
         return ['"%s"' % self.url, '"%s"' % self.method]
 
 
