@@ -196,11 +196,8 @@ def _gen_apijs(conf):
                 args = ', ' + ', '.join(argnames)
             op_func = """
                 {name}: function(self{args}) {0}
-                    var args = [];
-                    for (var i = 1; i < arguments.length; i++) {0}
-                        args.push(arguments[i])
-                    {1}
-                    var promise = self._call('{name}', args);
+                    var __args__ = Array.prototype.slice.call(arguments, 1);
+                    var promise = self._call('{name}', __args__);
                     self._flush();
                     return promise;
                 {1}
