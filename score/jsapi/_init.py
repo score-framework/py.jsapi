@@ -92,7 +92,6 @@ def init(confdict, ctx, http, jslib=None):
         dependencies = {
             conf['jslib.require'] + '/excformat': version,
             'bluebird': '3.X.X',
-            'score.init': '0.X.X',
             'score.oop': '0.4.X'
         }
 

@@ -24,7 +24,7 @@
 // the discretion of STRG.AT GmbH also the competent court, in whose district the
 // Licensee has his registered seat, an establishment or assets.
 
-define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(excformat, BPromise, score) {
+define("%s", ["%s/excformat", "bluebird", "score.oop"], function(excformat, BPromise, oop) {
 
     var defer = function() {
         var resolve, reject;
@@ -39,12 +39,12 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
         };
     };
 
-    var SafeException = score.oop.Class({
+    var SafeException = oop.Class({
         __name__: 'SafeException',
-        __parent__: score.oop.Exception
+        __parent__: oop.Exception
     });
 
-    var Endpoint = score.oop.Class({
+    var Endpoint = oop.Class({
         __name__: 'JsApi__Endpoint',
 
         __static__: {
@@ -68,7 +68,7 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
 
     });
 
-    Endpoint.URL = score.oop.Class({
+    Endpoint.URL = oop.Class({
         __name__: 'JsApi__Endpoint__URL',
         __parent__: Endpoint,
 
@@ -110,7 +110,7 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
 
     });
 
-    var Queue = score.oop.Class({
+    var Queue = oop.Class({
         __name__: 'JsApi__Queue',
 
         __init__: function(self, api) {
@@ -185,10 +185,10 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
                                 if (result.type in self.api.exc) {
                                     result = self.api.exc[result.type](result.message);
                                 } else {
-                                    result = new score.oop.Exception(result.message);
+                                    result = new oop.Exception(result.message);
                                 }
                             } else {
-                                result = new score.oop.Exception();
+                                result = new oop.Exception();
                             }
                             requests[i].reject(result);
                         }
@@ -225,7 +225,7 @@ define("%s", ["%s/excformat", "bluebird", "score.init", "score.oop"], function(e
 
     %s
 
-    var JsApi = score.oop.Class({
+    var JsApi = oop.Class({
         __name__: 'JsApi',
 
         __static__: {
