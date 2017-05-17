@@ -253,26 +253,12 @@ class ConfiguredJsapiModule(ConfiguredModule):
             raise ConfigurationError(
                 score.jsapi, 'Cannot create Worker: No outdir configured')
 
-        class Worker(score.serve.FileWatcherWorker):
+        class Worker(score.serve.SimpleWorker):
 
             def __init__(self, conf):
                 self.conf = conf
 
-            def prepare(self):
-                super().prepare()
-                self._render()
-                for endpoint in self.conf.endpoints.values():
-                    for op in endpoint.ops.values():
-                        try:
-                            file = op.__module__.__file__
-                        except AttributeError:
-                            continue
-                        self.watch(file)
-
-            def changed(self, file):
-                self._render()
-
-            def _render(self):
+            def loop(self):
                 for path in self.conf.tpl_loader.iter_paths():
                     reduced_path = path[len('score/'):]
                     file = os.path.join(self.conf.serve_outdir, reduced_path)
