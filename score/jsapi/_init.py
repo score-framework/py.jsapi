@@ -32,6 +32,7 @@ from ._endpoint import UrlEndpoint
 from score.tpl import TemplateNotFound
 from score.tpl.loader import Loader
 from collections import OrderedDict
+from ._endpoint import SafeException
 
 from score.init import (
     ConfigurationError, ConfiguredModule, parse_dotted_path,
@@ -102,7 +103,7 @@ def _make_api(endpoint):
 
 class JsapiTemplateLoader(Loader):
 
-    template = '''
+    jsapi_template = '''
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
@@ -123,6 +124,31 @@ class JsapiTemplateLoader(Loader):
         });
     '''
 
+    exceptions_template = '''
+        // Universal Module Loader
+        // https://github.com/umdjs/umd
+        // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
+        (function (root, factory) {
+            if (typeof define === 'function' && define.amd) {
+                // AMD. Register as an anonymous module.
+                define(['./exception'], factory);
+            } else if (typeof module === 'object' && module.exports) {
+                // Node. Does not work with strict CommonJS, but
+                // only CommonJS-like environments that support module.exports,
+                // like Node.
+                module.exports = factory(require('./exception'));
+            }
+        })(this, function(Exception) {
+
+            var definitions = %s;
+
+            for (var name in definitions) {
+                Exception.define(name, definitions[name]);
+            }
+
+        });
+    '''
+
     def __init__(self, jsapi):
         self.conf = jsapi
 
@@ -135,6 +161,7 @@ class JsapiTemplateLoader(Loader):
                 yield 'score/jsapi/' + os.path.relpath(path, rootdir)
         for name in self.conf.endpoints:
             yield 'score/jsapi/endpoint/%s.js' % (name,)
+        yield 'score/jsapi/exceptions.js'
         yield 'score/jsapi.js'
 
     def load(self, path):
@@ -142,10 +169,19 @@ class JsapiTemplateLoader(Loader):
             dependencies = [] + ['./jsapi/endpoint/%s' % name
                                  for name in self.conf.endpoints]
             dependencies.insert(0, './jsapi/unified')
-            return False, (self.template % (
+            return False, (self.jsapi_template % (
                 json.dumps(dependencies),
                 ', '.join('require("%s")' % dep for dep in dependencies)
             ))
+        elif path == 'score/jsapi/exceptions.js':
+            exceptions = {}
+
+            def add_subclasses(cls):
+                for exc in cls.__subclasses__():
+                    exceptions[exc.__name__] = cls.__name__
+                    add_subclasses(exc)
+            add_subclasses(SafeException)
+            return False, (self.exceptions_template % (json.dumps(exceptions)))
         here = os.path.dirname(__file__)
         file = os.path.join(here, 'js', path[len('score/jsapi/'):])
         if os.path.exists(file):
