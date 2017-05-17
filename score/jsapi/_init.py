@@ -160,13 +160,13 @@ class JsapiTemplateLoader(Loader):
                 path = os.path.join(base, filename)
                 yield 'score/jsapi/' + os.path.relpath(path, rootdir)
         for name in self.conf.endpoints:
-            yield 'score/jsapi/endpoint/%s.js' % (name,)
+            yield 'score/jsapi/endpoints/%s.js' % (name,)
         yield 'score/jsapi/exceptions.js'
         yield 'score/jsapi.js'
 
     def load(self, path):
         if path == 'score/jsapi.js':
-            dependencies = [] + ['./jsapi/endpoint/%s' % name
+            dependencies = [] + ['./jsapi/endpoints/%s' % name
                                  for name in self.conf.endpoints]
             dependencies.insert(0, './jsapi/unified')
             return False, (self.jsapi_template % (
@@ -187,7 +187,7 @@ class JsapiTemplateLoader(Loader):
         if os.path.exists(file):
             return True, file
         for endpoint in self.conf.endpoints.values():
-            enpoint_path = 'score/jsapi/endpoint/%s.js' % (endpoint.name,)
+            enpoint_path = 'score/jsapi/endpoints/%s.js' % (endpoint.name,)
             if path == enpoint_path:
                 return False, endpoint.render_js(self.conf)
         raise TemplateNotFound(path)
