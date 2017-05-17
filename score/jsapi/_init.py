@@ -253,8 +253,6 @@ class ConfiguredJsapiModule(ConfiguredModule):
             raise ConfigurationError(
                 score.jsapi, 'Cannot create Worker: No outdir configured')
 
-        os.makedirs(os.path.join(self.serve_outdir, 'endpoints'), exist_ok=True)
-
         class Worker(score.serve.FileWatcherWorker):
 
             def __init__(self, conf):
@@ -275,13 +273,10 @@ class ConfiguredJsapiModule(ConfiguredModule):
                 self._render()
 
             def _render(self):
-                file = os.path.join(self.conf.serve_outdir, 'exceptions.js')
-                tpl = 'score/jsapi/exceptions.js'
-                open(file, 'w').write(self.conf.tpl.render(tpl))
-                for name in self.conf.endpoints:
-                    file = os.path.join(self.conf.serve_outdir,
-                                        'endpoints', '%s.js' % name)
-                    tpl = 'score/jsapi/endpoints/%s.js' % name
-                    open(file, 'w').write(self.conf.tpl.render(tpl))
+                for path in self.conf.tpl_loader.iter_paths():
+                    reduced_path = path[len('score/'):]
+                    file = os.path.join(self.conf.serve_outdir, reduced_path)
+                    os.makedirs(os.path.dirname(file), exist_ok=True)
+                    open(file, 'w').write(self.conf.tpl.render(path))
 
         return {'watcher': Worker(self)}
