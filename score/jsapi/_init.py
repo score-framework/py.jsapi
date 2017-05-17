@@ -172,9 +172,9 @@ class JsapiTemplateLoader(Loader):
 
     def load(self, path):
         if path == 'score/jsapi.js':
-            dependencies = [] + ['./jsapi/endpoints/%s' % name
-                                 for name in self.conf.endpoints]
-            dependencies.insert(0, './jsapi/unified')
+            dependencies = ['./jsapi/unified', './jsapi/exceptions'] + [
+                './jsapi/endpoints/%s' % name
+                for name in self.conf.endpoints]
             return False, (self.jsapi_template % (
                 json.dumps(dependencies),
                 ', '.join('require("%s")' % dep for dep in dependencies)
