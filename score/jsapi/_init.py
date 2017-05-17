@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 defaults = {
     'endpoints': [],
     'expose': False,
+    'serve.outdir': None,
 }
 
 
@@ -70,7 +71,12 @@ def init(confdict, ctx, tpl, http):
     conf.update(confdict)
     endpoints = list(map(parse_dotted_path, parse_list(conf['endpoints'])))
     expose = parse_bool(conf['expose'])
-    return ConfiguredJsapiModule(ctx, tpl, http, endpoints, expose)
+    if conf['serve.outdir'] and not os.path.isdir(conf['serve.outdir']):
+        import score.jsapi
+        raise ConfigurationError(
+            score.jsapi, 'Configured serve.outdir does not exist')
+    return ConfiguredJsapiModule(ctx, tpl, http, endpoints, expose,
+                                 conf['serve.outdir'])
 
 
 js_keywords = (
@@ -199,12 +205,13 @@ class ConfiguredJsapiModule(ConfiguredModule):
     <score.init.ConfiguredModule>`.
     """
 
-    def __init__(self, ctx, tpl, http, endpoints, expose):
+    def __init__(self, ctx, tpl, http, endpoints, expose, serve_outdir):
         super().__init__(__package__)
         self.ctx = ctx
         self.tpl = tpl
         self.http = http
         self.expose = expose
+        self.serve_outdir = serve_outdir
         self.endpoints = OrderedDict()
         for endpoint in endpoints:
             self.add_endpoint(endpoint)
@@ -238,3 +245,43 @@ class ConfiguredJsapiModule(ConfiguredModule):
     def render_endpoint_js(self, endpoint):
         if isinstance(endpoint, str):
             endpoint = self.endpoints[endpoint]
+
+    def score_serve_workers(self):
+        import score.serve
+        if not self.serve_outdir:
+            import score.jsapi
+            raise ConfigurationError(
+                score.jsapi, 'Cannot create Worker: No outdir configured')
+
+        os.makedirs(os.path.join(self.serve_outdir, 'endpoints'), exist_ok=True)
+
+        class Worker(score.serve.FileWatcherWorker):
+
+            def __init__(self, conf):
+                self.conf = conf
+
+            def prepare(self):
+                super().prepare()
+                self._render()
+                for endpoint in self.conf.endpoints.values():
+                    for op in endpoint.ops.values():
+                        try:
+                            file = op.__module__.__file__
+                        except AttributeError:
+                            continue
+                        self.watch(file)
+
+            def changed(self, file):
+                self._render()
+
+            def _render(self):
+                file = os.path.join(self.conf.serve_outdir, 'exceptions.js')
+                tpl = 'score/jsapi/exceptions.js'
+                open(file, 'w').write(self.conf.tpl.render(tpl))
+                for name in self.conf.endpoints:
+                    file = os.path.join(self.conf.serve_outdir,
+                                        'endpoints', '%s.js' % name)
+                    tpl = 'score/jsapi/endpoints/%s.js' % name
+                    open(file, 'w').write(self.conf.tpl.render(tpl))
+
+        return {'watcher': Worker(self)}
