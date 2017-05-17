@@ -52,21 +52,21 @@
         this.stack = (new Error()).stack;
     };
 
-    Exception.instances = {};
+    Exception.classes = {};
+
+    Exception.define = function(name, parentName) {
+        var NewException = function(message) {
+            Exception.classes[parentName].call(this, message);
+        };
+        NewException.prototype = Object.create(Exception.prototype);
+        NewException.prototype.name = name;
+        Exception.classes[name] = NewException;
+        return NewException;
+    };
 
     Exception.prototype = Object.create(Error.prototype);
 
     Exception.prototype.name = 'JsapiException';
-
-    Exception.prototype.define = function(name, parentName) {
-        var NewException = function(message) {
-            Exception.instances[parentName].call(this, message);
-        };
-        NewException.prototype = Object.create(Exception.prototype);
-        NewException.prototype.name = name;
-        Exception.instances[name] = NewException;
-        return NewException;
-    };
 
     return Exception;
 
