@@ -1,13 +1,16 @@
+import abc
 import inspect
 import logging
 from .exc2json import exc2json
 import sys
 import time
+import json
+from collections import OrderedDict
 
 log = logging.getLogger('score.jsapi')
 
 
-class Endpoint:
+class Endpoint(metaclass=abc.ABCMeta):
     """
     An endpoint capable of handling requests from javascript.
     """
@@ -60,7 +63,7 @@ class Endpoint:
           part will be `None`.
         """
         try:
-            with self.conf.ctx_conf.Context() as ctx:
+            with self.conf.ctx.Context() as ctx:
                 for member, value in ctx_members.items():
                     setattr(ctx, member, value)
                 return True, self.ops[name](ctx, *arguments)
@@ -75,8 +78,33 @@ class Endpoint:
                 result = None
             return False, result
 
-    def _js_args(self, conf):
-        return []
+    def _render_ops_js(self):
+        op_defs = OrderedDict()
+        for funcname in sorted(self.ops):
+            func = self.ops[funcname]
+            minargs = 0
+            maxargs = 0
+            argnames = []
+            skipped_ctx = False
+            for name, param in inspect.signature(func).parameters.items():
+                if not skipped_ctx:
+                    skipped_ctx = True
+                    continue
+                argnames.append(name)
+                maxargs += 1
+                if param.default == inspect.Parameter.empty:
+                    minargs += 1
+            op_defs[funcname] = {
+                "name": funcname,
+                "minargs": minargs,
+                "maxargs": maxargs,
+                "argnames": argnames
+            }
+        return json.dumps(op_defs)
+
+    @abc.abstractmethod
+    def render_js(self, conf):
+        return ''
 
 
 class UrlEndpoint(Endpoint):
@@ -84,7 +112,28 @@ class UrlEndpoint(Endpoint):
     An Endpoint, which can be accessed via AJAX from javascript.
     """
 
-    type = 'URL'
+    template = '''
+        // Universal Module Loader
+        // https://github.com/umdjs/umd
+        // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
+        (function (root, factory) {
+            if (typeof define === 'function' && define.amd) {
+                // AMD. Register as an anonymous module.
+                define(['./url'], factory);
+            } else if (typeof module === 'object' && module.exports) {
+                // Node. Does not work with strict CommonJS, but
+                // only CommonJS-like environments that support module.exports,
+                // like Node.
+                module.exports = factory(require('./url'));
+            } else {
+                factory(root.score.jsapi.UrlEndpoint);
+            }
+        })(this, function(UrlEndpoint) {
+
+            return new UrlEndpoint("%s", %s, "%s", "%s");
+
+        });
+    '''
 
     def __init__(self, name, *, method="POST"):
         super().__init__(name)
@@ -136,9 +185,10 @@ class UrlEndpoint(Endpoint):
             })
         return responses
 
-    def _js_args(self, conf):
-        return ['"%s"' % self.conf.http.url(None, 'score.jsapi:' + self.name),
-                '"%s"' % self.method]
+    def render_js(self, conf):
+        url = conf.http.url(None, 'score.jsapi:' + self.name)
+        return self.template % (
+            self.name, self._render_ops_js(), url, self.method)
 
 
 class SafeException(Exception):
