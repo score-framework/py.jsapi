@@ -18,10 +18,10 @@ setup(
     packages=['score', 'score.jsapi'],
     namespace_packages=['score'],
     package_dir={
-        'score.jsapi': 'score/jsapi/js',
+        'score.jsapi.js': 'score/jsapi/js',
     },
     package_data={
-        'score.jsapi': [
+        'score.jsapi.js': [
             'endpoint/url.js',
             'endpoint.js',
             'exception.js',
