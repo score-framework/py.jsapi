@@ -40,7 +40,7 @@
         module.exports = factory(require('./endpoint'), require('./exception'));
     } else {
         // Browser globals (root is window)
-        root.score.jsapi.Queue = factory(root.score.jsapi.Exception);
+        root.score.jsapi.Queue = factory(root.score.jsapi.Endpoint, root.score.jsapi.Exception);
     }
 })(this, function(Endpoint, Exception) {
 
