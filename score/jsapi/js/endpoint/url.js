@@ -44,7 +44,7 @@
     }
 })(this, function(Endpoint) {
 
-    UrlEndpoint = function(name, operations, url, method) {
+    var UrlEndpoint = function(name, operations, url, method) {
         this.url = url;
         this.method = method || 'POST';
         Endpoint.call(this, name, operations);
@@ -63,7 +63,7 @@
                 if (request.status === 200) {
                     resolve(JSON.parse(request.responseText));
                 }
-                msg = 'Received unexpected status code ' +
+                var msg = 'Received unexpected status code ' +
                     request.status + ': ' + request.statusText;
                 reject(new Error(msg));
                 return;
