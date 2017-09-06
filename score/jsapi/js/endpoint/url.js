@@ -47,12 +47,17 @@
     var UrlEndpoint = function(name, operations, url, method) {
         this.url = url;
         this.method = method || 'POST';
+        if (this.method == 'GET') {
+            this.send = this.sendEach;
+        } else {
+            this.send = this.sendBulk;
+        }
         Endpoint.call(this, name, operations);
     };
 
     UrlEndpoint.prototype = Object.create(Endpoint.prototype);
 
-    UrlEndpoint.prototype.send = function(requests) {
+    UrlEndpoint.prototype.sendBulk = function(requests) {
         var self = this;
         return new Promise(function(resolve, reject) {
             var request = new XMLHttpRequest();
@@ -81,6 +86,15 @@
                 request.send(JSON.stringify(requests));
             }
         });
+    };
+
+    UrlEndpoint.prototype.sendEach = function(requests) {
+        var self = this;
+        return Promise.all(requests.map(function(request) {
+            return self.sendBulk([request]).then(function(result) {
+                return result[0];
+            });
+        }));
     };
 
     return UrlEndpoint;
