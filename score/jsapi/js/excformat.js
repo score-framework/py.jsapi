@@ -50,15 +50,15 @@
         if (typeof exc.trace === 'undefined') {
             return exc.type + ': ' + exc.message
         }
-        var msg = 'Traceback (most recent call last):\\n';
+        var msg = 'Traceback (most recent call last):\n';
         for (var j = 0; j < exc.trace.length; j++) {
             var frame = exc.trace[j];
             msg += '  File "' + frame[0] +
                 '", line "' + frame[1] +
-                '", in ' + frame[2] + '\\n';
-            msg += '    ' + frame[3] + '\\n';
+                '", in ' + frame[2] + '\n';
+            msg += '    ' + frame[3] + '\n';
         }
-        msg += '\\n' + exc.type + ': ' + exc.message;
+        msg += '\n' + exc.type + ': ' + exc.message;
         return msg;
     }
 

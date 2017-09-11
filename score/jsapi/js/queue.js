@@ -135,7 +135,7 @@
                         }
                         if (result) {
                             if (result.type in Exception.classes) {
-                                result = Exception.classes[result.type](result.message);
+                                result = new Exception.classes[result.type](result.message);
                             } else {
                                 result = new Exception(result.message);
                             }

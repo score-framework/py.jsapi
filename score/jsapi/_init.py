@@ -194,8 +194,11 @@ class JsapiTemplateLoader(Loader):
             exceptions = {}
 
             def add_subclasses(cls):
+                parent = cls.__name__
+                if cls == SafeException:
+                    parent = None
                 for exc in cls.__subclasses__():
-                    exceptions[exc.__name__] = cls.__name__
+                    exceptions[exc.__name__] = parent
                     add_subclasses(exc)
             add_subclasses(SafeException)
             return False, (self.exceptions_template % (json.dumps(exceptions)))

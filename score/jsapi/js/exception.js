@@ -56,7 +56,11 @@
 
     Exception.define = function(name, parentName) {
         var NewException = function(message) {
-            Exception.classes[parentName].call(this, message);
+            if (parentName) {
+                Exception.classes[parentName].call(this, message);
+            } else {
+                Exception.call(this, message);
+            }
         };
         NewException.prototype = Object.create(Exception.prototype);
         NewException.prototype.name = name;
