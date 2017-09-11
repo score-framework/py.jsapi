@@ -65,7 +65,16 @@
         NewException.prototype = Object.create(Exception.prototype);
         NewException.prototype.name = name;
         Exception.classes[name] = NewException;
+        for (var i = 0; i < Exception.defineCallbacks.length; i++)  {
+            Exception.defineCallbacks[i](name, NewException);
+        }
         return NewException;
+    };
+
+    Exception.defineCallbacks = [];
+
+    Exception.onDefine = function(callback) {
+        Exception.defineCallbacks.push(callback);
     };
 
     Exception.prototype = Object.create(Error.prototype);

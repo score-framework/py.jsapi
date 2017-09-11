@@ -32,23 +32,25 @@
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(['./queue', './endpoint'], factory);
+        define(['./queue', './endpoint', './exception'], factory);
     } else if (typeof module === 'object' && module.exports) {
         // Node. Does not work with strict CommonJS, but
         // only CommonJS-like environments that support module.exports,
         // like Node.
-        module.exports = factory(require('./queue'), require('./endpoint'));
+        module.exports = factory(require('./queue'), require('./endpoint'), require('./exception'));
     } else {
         // Browser globals (root is window)
-        root.score.jsapi.unified = factory(root.score.jsapi.Queue, root.score.jsapi.Endpoint);
+        root.score.jsapi.unified = factory(root.score.jsapi.Queue, root.score.jsapi.Endpoint, root.score.jsapi.Exception);
     }
-})(this, function(Queue, Endpoint) {
+})(this, function(Queue, Endpoint, Exception) {
 
     var queue = new Queue();
 
     var Jsapi = {
 
         _ops: {},
+
+        _exceptions: {},
 
         _call: function(func, version, args) {
             if (!(func in Jsapi._ops)) {
@@ -115,6 +117,16 @@
     }
 
     Endpoint.onCreate(registerEndpoint);
+
+    var registerException = function(name, exception) {
+        Jsapi._exceptions[name] = exception;
+    };
+
+    for (var name in Exception.classes) {
+        registerException(name, Exception.classes[name]);
+    }
+
+    Exception.onDefine(registerException);
 
     return Jsapi;
 
