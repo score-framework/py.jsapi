@@ -118,9 +118,13 @@
                         requests[i].resolve(result);
                     } else {
                         if (result && result.trace) {
-                            var args = ['Error in jsapi call', requests[i].data[0], '('];
-                            for (var j = 1; j < requests[i].data.length; j++) {
-                                if (j != 1) {
+                            var desc = requests[i].data[0];
+                            if (requests[i].data[1]) {
+                                desc += '/' + requests[i].data[1];
+                            }
+                            var args = ['Error in jsapi call', desc, '('];
+                            for (var j = 2; j < requests[i].data.length; j++) {
+                                if (j != 2) {
                                     args.push(',');
                                 }
                                 args.push(requests[i].data[j]);

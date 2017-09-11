@@ -50,11 +50,15 @@
 
         _ops: {},
 
-        _call: function(func, args) {
+        _call: function(func, version, args) {
             if (!(func in Jsapi._ops)) {
                 throw new Error("Undefined operation '" + func + "'");
             }
             var op = Jsapi._ops[func];
+            if (typeof args == 'undefined') {
+                args = version;
+                version = op.version;
+            }
             if (op.minargs == op.maxargs) {
                 if (args.length != op.minargs) {
                     throw new Error("Invalid number of arguments for operation '" + func + "': Expected: " + op.minargs + ", Received: " + args.length);
@@ -67,7 +71,7 @@
                     throw new Error("Too many arguments for operation " + func + ": Expected at most " + op.maxargs + ", received: " + args.length);
                 }
             }
-            var request = [func];
+            var request = [func, version];
             for (var i = 0; i < args.length; i++) {
                 if (typeof args[i] === 'undefined') {
                     throw new Error("Error in invocation of operation " + func + ": Argument '" + op.argnames[i] + "' is undefined");
@@ -92,6 +96,7 @@
         };
         Jsapi._ops[operation.name] = {
             name: operation.name,
+            version: operation.version,
             minargs: operation.minargs,
             maxargs: operation.maxargs,
             argnames: operation.argnames,
@@ -100,8 +105,8 @@
     };
 
     var registerEndpoint = function(endpoint) {
-        for (var name in endpoint.operations) {
-            registerOperation(endpoint, endpoint.operations[name]);
+        for (var i = 0; i < endpoint.operations.length; i++) {
+            registerOperation(endpoint, endpoint.operations[i]);
         }
     };
 

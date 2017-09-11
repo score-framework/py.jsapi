@@ -5,9 +5,101 @@ from .exc2json import exc2json
 import sys
 import time
 import json
-from collections import OrderedDict
+import functools
 
 log = logging.getLogger('score.jsapi')
+
+
+class EndpointOperation:
+    """
+    Wrapper class for operations registered on an endpoint.
+    """
+
+    def __init__(self, name, endpoint, callback, *,
+                 version='', first_version=None):
+        self.score_jsapi_op_name = name
+        self.score_jsapi_op_version = str(version)
+        self.__endpoint = endpoint
+        if first_version:
+            self.first_version = first_version
+            self.first_version.__versions.append(self)
+        else:
+            self.first_version = self
+            self.__versions = []
+        # The next call will store the callback as self.__wrapped__
+        functools.update_wrapper(self, callback)
+        # Register this operation with the endpoint
+        self.__endpoint._register_op(self)
+
+    def __call__(self, *args, **kwargs):
+        """
+        Invoke wrapped callback.
+        """
+        return self.__wrapped__(*args, **kwargs)
+
+    def score_jsapi_create_version(self, name):
+        """
+        Create a wrapper function for a newer version of this operation.
+
+        The alias of this function is just `version`, so you can create newer
+        versions of your operations with the following code:
+
+        .. code-block:: python
+
+            @endpoint.op
+            def op():
+                pass
+
+            @op.version(2)
+            def op():
+                pass
+
+        The version *name* will be converted to a string and increasing version
+        numbers should be sortable as strings. Within these constraints, the
+        following version names are valid:
+
+        .. code-block:: python
+
+            @op.version(2)
+            def op():
+                pass
+
+            @op.version(3)
+            def op():
+                pass
+
+            @op.version("3.1")
+            def op():
+                pass
+
+        The following usage will not work as expected, since the version "ham"
+        will be interpreted as an earlier version as "spam" (since
+        "ham" < "spam") and the generated javascript will call the "spam"
+        version by default (since it is considered the latest version because of
+        that ordering):
+
+        .. code-block:: python
+
+            @op.version("spam")
+            def op():
+                pass
+
+            @op.version("ham")
+            def op():
+                pass
+
+        """
+        def version_annotation(callback):
+            return EndpointOperation(
+                self.score_jsapi_op_name, self.__endpoint, callback,
+                version=name, first_version=self.first_version)
+        return version_annotation
+
+    version = score_jsapi_create_version
+
+    @property
+    def score_jsapi_op_versions(self):
+        return tuple(self.first_version.__versions)
 
 
 class Endpoint(metaclass=abc.ABCMeta):
@@ -26,19 +118,25 @@ class Endpoint(metaclass=abc.ABCMeta):
         javascript has no support for keyword arguments and :ref:`keyword-only
         parameters <python:keyword-only_parameter>` will confuse this function.
         """
-        name = func.__name__
-        if name in self.ops:
-            raise ValueError('Operation "%s" already registered' % name)
-        for argname in inspect.signature(func).parameters:
+        return EndpointOperation(func.__name__, self, func)
+
+    def _register_op(self, operation):
+        """
+        Registers an operation. This function is called from the constructor of
+        :class:`EndpointOperation`.
+        """
+        name = operation.score_jsapi_op_name
+        for argname in inspect.signature(operation).parameters:
             if argname in ('self', 'cls'):
                 continue
             if argname != 'ctx':
                 raise ValueError("First argument must be the context 'ctx'")
             break
-        self.ops[name] = func
-        return func
+        if name in self.ops:
+            raise ValueError('Operation "%s" already registered' % name)
+        self.ops[(name, operation.score_jsapi_op_version)] = operation
 
-    def call(self, name, arguments, ctx_members={}):
+    def call(self, name, version, arguments, ctx_members={}):
         """
         Calls function with given *name* and the given `list` of *arguments*.
 
@@ -66,7 +164,7 @@ class Endpoint(metaclass=abc.ABCMeta):
             with self.conf.ctx.Context() as ctx:
                 for member, value in ctx_members.items():
                     setattr(ctx, member, value)
-                return True, self.ops[name](ctx, *arguments)
+                return True, self.ops[(name, version)](ctx, *arguments)
         except Exception as e:
             if not isinstance(e, SafeException):
                 log.exception(e)
@@ -79,9 +177,10 @@ class Endpoint(metaclass=abc.ABCMeta):
             return False, result
 
     def _render_ops_js(self):
-        op_defs = OrderedDict()
-        for funcname in sorted(self.ops):
-            func = self.ops[funcname]
+        op_defs = []
+        for key in sorted(self.ops):
+            funcname, version = key
+            func = self.ops[key]
             minargs = 0
             maxargs = 0
             argnames = []
@@ -94,12 +193,13 @@ class Endpoint(metaclass=abc.ABCMeta):
                 maxargs += 1
                 if param.default == inspect.Parameter.empty:
                     minargs += 1
-            op_defs[funcname] = {
+            op_defs.append({
                 "name": funcname,
+                "version": version,
                 "minargs": minargs,
                 "maxargs": maxargs,
                 "argnames": argnames
-            }
+            })
         return json.dumps(op_defs)
 
     @abc.abstractmethod
@@ -145,12 +245,14 @@ class UrlEndpoint(Endpoint):
         Handles all functions calls passed with a request.
 
         The provided *requests* variable needs to be a list of "calls", where
-        each call is a json-encoded list containing the function name as first
-        entry, and its arguments as the rest of the list. Example value for
-        *requests* with a call to an addition and a division::
+        each call is a list containing the function name as first entry, the
+        version of the operation as second entry, and the arguments for the
+        invocation as the rest of the list. Example value for *requests* with a
+        call to the initial version of an addition function and a call to the
+        second version of a division function::
 
-            ['["add",40,2]',
-             '["divide",42,0]']
+            [["add", "", 40, 2],
+             ["divide", "2", 42, 0]]
 
         The return value will be a list with two elements, one containing
         success values, the other containing results::
@@ -163,19 +265,23 @@ class UrlEndpoint(Endpoint):
         The input and output is already in the correct format for communication
         with the javascript part, so the result can be sent as
         "application/json"-encoded response to the calling javascript function.
-        See the pyramid implementation for example usage of this function.
         """
         responses = []
         for r in requests:
             name = r[0]
-            args = r[1:]
+            version = r[1]
+            args = r[2:]
             if log.isEnabledFor(logging.DEBUG):
                 start = time.time()
-            success, result = self.call(name, args, ctx_members=ctx_members)
+            success, result = self.call(
+                name, version, args, ctx_members=ctx_members)
             if log.isEnabledFor(logging.DEBUG):
+                desc = name
+                if version is not None:
+                    desc = '%s/v%s' % (name, version)
                 log.debug(
                     'Handled call to `%s` in %dms: %s',
-                    name,
+                    desc,
                     1000 * (time.time() - start),
                     'success' if success else 'error',
                 )
