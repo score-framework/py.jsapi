@@ -77,7 +77,7 @@
             return queue.queue(request, op.endpoint);
         },
 
-        _flush: function(queueName) {
+        _flush: function() {
             return queue.flush();
         }
 

@@ -127,7 +127,7 @@
                             }
                             args.push(')');
                             args.push("\n" + excformat(result));
-                            console.error.apply(console, args);
+                            console.error.apply(console, args);  // eslint-disable-line no-console
                         }
                         if (result) {
                             if (result.type in Exception.classes) {
@@ -144,7 +144,7 @@
             }).catch(function(error) {
                 for (var i = 0; i < requests.length; i++) {
                     requests[i].reject(error);
-                };
+                }
             });
         };
         var promises = [];
