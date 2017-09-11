@@ -54,6 +54,10 @@ def init(confdict, ctx, tpl, http):
     Initializes this module acoording to :ref:`our module initialization
     guidelines <module_initialization>` with the following configuration keys:
 
+    :confkey:`endpoint` :confdefault:`None`
+        Optional single endpoint value that can be provided for convenience. See
+        `endpoints`, below, for details.
+
     :confkey:`endpoints` :confdefault:`list()`
         A :func:`list <score.init.parse_list>` of :func:`dotted paths
         <score.init.parse_dotted_path>` pointing to any amount of
@@ -75,6 +79,8 @@ def init(confdict, ctx, tpl, http):
     conf = dict(defaults.items())
     conf.update(confdict)
     endpoints = list(map(parse_dotted_path, parse_list(conf['endpoints'])))
+    if 'endpoint' in conf:
+        endpoints.append(parse_dotted_path(conf['endpoint']))
     expose = parse_bool(conf['expose'])
     if conf['serve.outdir'] and not os.path.isdir(conf['serve.outdir']):
         import score.jsapi
