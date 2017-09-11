@@ -32,17 +32,17 @@
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(['./endpoint', './exception'], factory);
+        define(['./endpoint', './exception', './excformat'], factory);
     } else if (typeof module === 'object' && module.exports) {
         // Node. Does not work with strict CommonJS, but
         // only CommonJS-like environments that support module.exports,
         // like Node.
-        module.exports = factory(require('./endpoint'), require('./exception'));
+        module.exports = factory(require('./endpoint'), require('./exception'), require('./excformat'));
     } else {
         // Browser globals (root is window)
-        root.score.jsapi.Queue = factory(root.score.jsapi.Endpoint, root.score.jsapi.Exception);
+        root.score.jsapi.Queue = factory(root.score.jsapi.Endpoint, root.score.jsapi.Exception, root.score.jsapi.excformat);
     }
-})(this, function(Endpoint, Exception) {
+})(this, function(Endpoint, Exception, excformat) {
 
     var defer = function() {
         var resolve, reject;
