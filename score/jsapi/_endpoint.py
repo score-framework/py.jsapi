@@ -47,11 +47,11 @@ class EndpointOperation:
         .. code-block:: python
 
             @endpoint.op
-            def op():
+            def op(ctx):
                 pass
 
             @op.version(2)
-            def op():
+            def op(ctx):
                 pass
 
         The version *name* will be converted to a string and increasing version
@@ -61,15 +61,15 @@ class EndpointOperation:
         .. code-block:: python
 
             @op.version(2)
-            def op():
+            def op(ctx):
                 pass
 
             @op.version(3)
-            def op():
+            def op(ctx):
                 pass
 
             @op.version("3.1")
-            def op():
+            def op(ctx):
                 pass
 
         The following usage will not work as expected, since the version "ham"
@@ -81,11 +81,11 @@ class EndpointOperation:
         .. code-block:: python
 
             @op.version("spam")
-            def op():
+            def op(ctx):
                 pass
 
             @op.version("ham")
-            def op():
+            def op(ctx):
                 pass
 
         """
@@ -301,22 +301,20 @@ class SafeException(Exception):
     """
     An Exception type, which indicates that the exception is safe to be
     transmitted to the client—even in production. The javascript API will reject
-    the call promise with a 2-tuple containing the exception type name and its
-    message.
+    the call promise with an instance of score.jsapi.Exception, or its
+    equivalent "score/jsapi/Exception" in AMD and CommonJS.
 
     Example in python …
 
     .. code-block:: python
 
-        class ZeroDivision(SafeException):
-
-            def __init__(self):
-                super().__init__('Cannot divide by zero')
+        class CustomError(SafeException):
+            pass
 
         @endpoint.op
-        def divide(dividend, divisor):
+        def divide(ctx, dividend, divisor):
             if not divisor:
-                raise ZeroDivision()
+                raise CustomError('Cannot divide by zero')
             return dividend / divisor
 
     … and javascript:
@@ -325,10 +323,10 @@ class SafeException(Exception):
 
         api.divide(1, 0).then(function(result) {
             console.log('1 / 0 = ' + result);
-        }).catch(function(msg) {
-            console.error('Error (' + msg[0] + '): ' + msg[1]);
+        }).catch(function(exc) {
+            console.error('Error (' + exc.name + '): ' + exc.message);
             // will output:
-            //   Error (ZeroDivision): Cannot divide by zero
+            //   Error (CustomError): Cannot divide by zero
         });
 
     """
