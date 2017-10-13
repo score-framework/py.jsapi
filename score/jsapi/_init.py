@@ -173,7 +173,8 @@ class JsapiTemplateLoader(Loader):
         here = os.path.dirname(__file__)
         rootdir = os.path.join(here, 'js')
         for base, dirs, files in os.walk(rootdir):
-            for filename in files:
+            dirs.sort()
+            for filename in sorted(files):
                 path = os.path.join(base, filename)
                 yield 'score/jsapi/' + os.path.relpath(path, rootdir)
         for name in self.conf.endpoints:
