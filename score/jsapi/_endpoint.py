@@ -103,8 +103,8 @@ class EndpointOperation:
         The following usage will not work as expected, since the version "ham"
         will be interpreted as an earlier version as "spam" (since
         "ham" < "spam") and the generated javascript will call the "spam"
-        version by default (since it is considered the latest version because of
-        that ordering):
+        version by default (since it is considered the latest version because
+        of that ordering):
 
         .. code-block:: python
 
@@ -141,8 +141,8 @@ class Endpoint(metaclass=abc.ABCMeta):
 
     def op(self, func):
         """
-        Registers an operation with this Endpoint. It will be available with the
-        same name and the same number of arguments in javascript. Note that
+        Registers an operation with this Endpoint. It will be available with
+        the same name and the same number of arguments in javascript. Note that
         javascript has no support for keyword arguments and :ref:`keyword-only
         parameters <python:keyword-only_parameter>` will confuse this function.
         """
@@ -168,16 +168,16 @@ class Endpoint(metaclass=abc.ABCMeta):
         """
         Calls function with given *name* and the given `list` of *arguments*.
 
-        It is also possible to set some :term:`context members <context member>`
-        before calling the actual handler for the operation.
+        It is also possible to set some :term:`context members
+        <context member>` before calling the actual handler for the operation.
 
         Will return a tuple consisting of a boolean success indicator and the
         actual response. The response depends on two factors:
 
         - If the call was successfull (i.e. no exception), it will contain the
           return value of the function.
-        - If a non-safe exception was caught (i.e. one that does not derive from
-          :class:`SafeException`) and the module was configured to expose
+        - If a non-safe exception was caught (i.e. one that does not derive
+          from :class:`SafeException`) and the module was configured to expose
           internal data (via the init configuration value "expose"), the
           response will consist of the json-convertible representation of the
           exception, which is achievede with the help of :func:`exc2json`
@@ -328,9 +328,9 @@ class UrlEndpoint(Endpoint):
 class SafeException(Exception):
     """
     An Exception type, which indicates that the exception is safe to be
-    transmitted to the client—even in production. The javascript API will reject
-    the call promise with an instance of score.jsapi.Exception, or its
-    equivalent "score/jsapi/Exception" in AMD and CommonJS.
+    transmitted to the client—even in production. The javascript API will
+    reject the call promise with an instance of score.jsapi.Exception, or
+    its equivalent "score/jsapi/Exception" in AMD and CommonJS.
 
     Example in python …
 
