@@ -325,9 +325,9 @@ class UrlEndpoint(Endpoint):
         });
     ''').lstrip()
 
-    def __init__(self, name, *, method="POST"):
+    def __init__(self, name, *, url=None, method="POST"):
         super().__init__(name)
-        self.url = '/jsapi/' + name
+        self.url = url or '/jsapi/' + name
         self.method = method
 
     def handle(self, requests, ctx_members={}):
@@ -370,9 +370,8 @@ class UrlEndpoint(Endpoint):
         return responses
 
     def render_js(self, conf):
-        url = conf.http.url(None, 'score.jsapi:' + self.name)
         return self.template % (
-            self.name, self._render_ops_js(), url, self.method)
+            self.name, self._render_ops_js(), self.url, self.method)
 
 
 class SafeException(Exception):
