@@ -25,19 +25,19 @@
 # Licensee has his registered seat, an establishment or assets.
 
 import inspect
+import json
 import logging
 import os
-import json
-from ._endpoint import UrlEndpoint
-from score.tpl import TemplateNotFound
-from score.tpl.loader import Loader
+import textwrap
 from collections import OrderedDict
-from ._endpoint import SafeException
 
 from score.init import (
-    ConfigurationError, ConfiguredModule, parse_dotted_path,
-    parse_list, parse_bool)
+    ConfigurationError, ConfiguredModule, parse_bool, parse_dotted_path,
+    parse_list)
+from score.tpl import TemplateNotFound
+from score.tpl.loader import Loader
 
+from ._endpoint import SafeException, UrlEndpoint
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ class JsapiTemplateLoader(Loader):
         });
     '''
 
-    exceptions_template = '''
+    exceptions_template = textwrap.dedent('''
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
@@ -164,7 +164,7 @@ class JsapiTemplateLoader(Loader):
             }
 
         });
-    '''
+    ''').lstrip()
 
     def __init__(self, jsapi):
         self.conf = jsapi
