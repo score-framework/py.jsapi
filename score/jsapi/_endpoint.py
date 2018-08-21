@@ -180,13 +180,33 @@ class Endpoint(metaclass=abc.ABCMeta):
           from :class:`SafeException`) and the module was configured to expose
           internal data (via the init configuration value "expose"), the
           response will consist of the json-convertible representation of the
-          exception, which is achievede with the help of :func:`exc2json`
+          exception, which is achieved with the help of :func:`exc2json`
         - If a :class:`.SafeException` was caught and the module was configured
           *not* to expose internal data, it will convert the exception type and
           message only (again via :func:`exc2json`). Thus, the javascript part
           will not receive a stack trace.
         - The last case (non-safe exception, expose is `False`), the *result*
           part will be `None`.
+        """
+        if log.isEnabledFor(logging.DEBUG):
+            start = time.time()
+        success, result = self._call(name, version, arguments, ctx_members)
+        if log.isEnabledFor(logging.DEBUG):
+            desc = name
+            if version is not None:
+                desc = '%s/v%s' % (name, version)
+            log.debug(
+                'Handled call to `%s` in %dms: %s',
+                desc,
+                1000 * (time.time() - start),
+                'success' if success else 'error',
+            )
+        return success, result
+
+    def _call(self, name, version, arguments, ctx_members):
+        """
+        Helper function for :meth:`.call`, that handles the callback
+        invocation.
         """
         try:
             with self.conf.ctx.Context() as ctx:
@@ -299,20 +319,8 @@ class UrlEndpoint(Endpoint):
             name = r[0]
             version = r[1]
             args = r[2:]
-            if log.isEnabledFor(logging.DEBUG):
-                start = time.time()
             success, result = self.call(
                 name, version, args, ctx_members=ctx_members)
-            if log.isEnabledFor(logging.DEBUG):
-                desc = name
-                if version is not None:
-                    desc = '%s/v%s' % (name, version)
-                log.debug(
-                    'Handled call to `%s` in %dms: %s',
-                    desc,
-                    1000 * (time.time() - start),
-                    'success' if success else 'error',
-                )
             responses.append({
                 'success': success,
                 'result': result,
