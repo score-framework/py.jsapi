@@ -241,6 +241,25 @@ version name, which will always cause it be regarded as the first version after
 sorting through the version strings.
 
 
+Preroutes
+---------
+
+It is also possible to register a callback, that will be invoked before *each*
+operation. This is the best method of checking authorization, for example. The
+preroute receives the :class:`score.ctx.Context` object as its sole argument:
+
+.. code-block:: python
+
+    @quest.op
+    def get_name_of_enchanter(ctx):
+        return 'Tim'
+
+    @quest.preroute
+    def preroute(ctx):
+        if not ctx.permits('cross-bridge'):
+            raise AuthorizationException('None shall pass!')
+
+
 API
 ===
 
@@ -262,6 +281,8 @@ Endpoints
 .. autoclass:: Endpoint
 
     .. automethod:: op
+
+    .. automethod:: preroute
 
     .. automethod:: call
 
