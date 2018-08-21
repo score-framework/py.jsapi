@@ -184,7 +184,7 @@ class Endpoint(metaclass=abc.ABCMeta):
         for argname in inspect.signature(operation).parameters:
             if argname in ('self', 'cls'):
                 continue
-            if argname != 'ctx':
+            if argname not in ('ctx', '_ctx'):
                 raise ValueError("First argument must be the context 'ctx'")
             break
         if name in self.ops:
@@ -199,7 +199,7 @@ class Endpoint(metaclass=abc.ABCMeta):
         for argname in inspect.signature(preroute).parameters:
             if argname in ('self', 'cls'):
                 continue
-            if argname != 'ctx':
+            if argname not in ('ctx', '_ctx'):
                 raise ValueError("First argument must be the context 'ctx'")
             break
         self.preroutes.append(preroute)
