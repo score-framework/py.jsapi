@@ -250,10 +250,10 @@ class Endpoint(metaclass=abc.ABCMeta):
         """
         try:
             with self.conf.ctx.Context() as ctx:
-                for preroute in self.preroutes:
-                    preroute(ctx)
                 for member, value in ctx_members.items():
                     setattr(ctx, member, value)
+                for preroute in self.preroutes:
+                    preroute(ctx)
                 return True, self.ops[(name, version)](ctx, *arguments)
         except Exception as e:
             if not isinstance(e, SafeException):
