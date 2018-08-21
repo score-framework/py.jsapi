@@ -130,6 +130,25 @@ class EndpointOperation:
         return tuple(self.first_version.__versions)
 
 
+class EndpointPreroute:
+    """
+    Wrapper for an Endpoint's preroutes.
+    """
+
+    def __init__(self, endpoint, callback):
+        self.__endpoint = endpoint
+        # The next call will store the callback as self.__wrapped__
+        functools.update_wrapper(self, callback)
+        # Register this operation with the endpoint
+        self.__endpoint._register_preroute(self)
+
+    def __call__(self, *args, **kwargs):
+        """
+        Invoke wrapped callback.
+        """
+        return self.__wrapped__(*args, **kwargs)
+
+
 class Endpoint(metaclass=abc.ABCMeta):
     """
     An endpoint capable of handling requests from javascript.
@@ -138,6 +157,14 @@ class Endpoint(metaclass=abc.ABCMeta):
     def __init__(self, name):
         self.name = name
         self.ops = {}
+        self.preroutes = []
+
+    def preroute(self, func):
+        """
+        Registers a preroute for this Endpoint. Preroutes are not available in
+        javascript. They will be invoked once before each operation invocation.
+        """
+        return EndpointPreroute(self, func)
 
     def op(self, func):
         """
@@ -163,6 +190,19 @@ class Endpoint(metaclass=abc.ABCMeta):
         if name in self.ops:
             raise ValueError('Operation "%s" already registered' % name)
         self.ops[(name, operation.score_jsapi_op_version)] = operation
+
+    def _register_preroute(self, preroute):
+        """
+        Registers a preroute. This function is called from the constructor of
+        :class:`EndpointPreroute`.
+        """
+        for argname in inspect.signature(preroute).parameters:
+            if argname in ('self', 'cls'):
+                continue
+            if argname != 'ctx':
+                raise ValueError("First argument must be the context 'ctx'")
+            break
+        self.preroutes.append(preroute)
 
     def call(self, name, version, arguments, ctx_members={}):
         """
@@ -210,6 +250,8 @@ class Endpoint(metaclass=abc.ABCMeta):
         """
         try:
             with self.conf.ctx.Context() as ctx:
+                for preroute in self.preroutes:
+                    preroute(ctx)
                 for member, value in ctx_members.items():
                     setattr(ctx, member, value)
                 return True, self.ops[(name, version)](ctx, *arguments)
