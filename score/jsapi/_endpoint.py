@@ -1,11 +1,13 @@
 import abc
-import inspect
-import logging
-from .exc2json import exc2json
-import sys
-import time
-import json
 import functools
+import inspect
+import json
+import logging
+import sys
+import textwrap
+import time
+
+from .exc2json import exc2json
 
 log = logging.getLogger('score.jsapi')
 
@@ -212,7 +214,7 @@ class UrlEndpoint(Endpoint):
     An Endpoint, which can be accessed via AJAX from javascript.
     """
 
-    template = '''
+    template = textwrap.dedent('''
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
@@ -233,7 +235,7 @@ class UrlEndpoint(Endpoint):
             return new UrlEndpoint("%s", %s, "%s", "%s");
 
         });
-    '''
+    ''').lstrip()
 
     def __init__(self, name, *, method="POST"):
         super().__init__(name)
