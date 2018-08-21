@@ -55,8 +55,8 @@ def exc2json(excinfo, untrace=[]):
         untrace.append(__file__)
         while trace and any(skip for skip in untrace if skip in trace[0][0]):
             trace = trace[1:]
-        trace = list(map(lambda frame: (frame[0], frame[1], frame[2], frame[3]),
-                         trace))
+        trace = list(map(
+            lambda frame: (frame[0], frame[1], frame[2], frame[3]), trace))
     return {
         'type': excinfo[0].__name__,
         'message': str(excinfo[1]),
