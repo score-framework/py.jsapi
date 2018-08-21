@@ -55,8 +55,8 @@ def init(confdict, ctx, tpl, http):
     guidelines <module_initialization>` with the following configuration keys:
 
     :confkey:`endpoint` :confdefault:`None`
-        Optional single endpoint value that can be provided for convenience. See
-        `endpoints`, below, for details.
+        Optional single endpoint value that can be provided for convenience.
+        See `endpoints`, below, for details.
 
     :confkey:`endpoints` :confdefault:`list()`
         A :func:`list <score.init.parse_list>` of :func:`dotted paths
@@ -83,9 +83,8 @@ def init(confdict, ctx, tpl, http):
         endpoints.append(parse_dotted_path(conf['endpoint']))
     expose = parse_bool(conf['expose'])
     if conf['serve.outdir'] and not os.path.isdir(conf['serve.outdir']):
-        import score.jsapi
         raise ConfigurationError(
-            score.jsapi, 'Configured serve.outdir does not exist')
+            'score.jsapi', 'Configured serve.outdir does not exist')
     return ConfiguredJsapiModule(ctx, tpl, http, endpoints, expose,
                                  conf['serve.outdir'])
 
@@ -263,9 +262,8 @@ class ConfiguredJsapiModule(ConfiguredModule):
     def score_serve_workers(self):
         import score.serve
         if not self.serve_outdir:
-            import score.jsapi
             raise ConfigurationError(
-                score.jsapi, 'Cannot create Worker: No outdir configured')
+                'score.jsapi', 'Cannot create Worker: No outdir configured')
 
         class Worker(score.serve.SimpleWorker):
 
