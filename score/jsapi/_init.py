@@ -271,10 +271,13 @@ class ConfiguredJsapiModule(ConfiguredModule):
                 self.conf = conf
 
             def loop(self):
-                for path in self.conf.tpl_loader.iter_paths():
-                    reduced_path = path[len('score/'):]
-                    file = os.path.join(self.conf.serve_outdir, reduced_path)
-                    os.makedirs(os.path.dirname(file), exist_ok=True)
-                    open(file, 'w').write(self.conf.tpl.render(path))
+                self.conf.build(self.conf.serve_outdir)
 
         return {'watcher': Worker(self)}
+
+    def build(self, target_folder):
+        for path in self.tpl_loader.iter_paths():
+            reduced_path = path[len('score/'):]
+            file = os.path.join(target_folder, reduced_path)
+            os.makedirs(os.path.dirname(file), exist_ok=True)
+            open(file, 'w').write(self.tpl.render(path))

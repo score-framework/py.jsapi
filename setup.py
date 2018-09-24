@@ -76,4 +76,9 @@ setup(
         'score.init >= 0.3',
         'score.ctx >= 0.3',
     ],
+    entry_points={
+        'score.cli': [
+            'jsapi = score.jsapi.cli:main',
+        ],
+    },
 )
