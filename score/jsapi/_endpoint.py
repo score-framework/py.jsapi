@@ -284,13 +284,13 @@ class Endpoint(metaclass=abc.ABCMeta):
                 maxargs += 1
                 if param.default == inspect.Parameter.empty:
                     minargs += 1
-            op_defs.append({
-                "name": funcname,
-                "version": version,
-                "minargs": minargs,
-                "maxargs": maxargs,
-                "argnames": argnames
-            })
+            op_defs.append(collections.OrderedDict((
+                ("name", funcname),
+                ("version", version),
+                ("minargs", minargs),
+                ("maxargs", maxargs),
+                ("argnames", argnames),
+            )))
         return json.dumps(op_defs)
 
     @abc.abstractmethod
