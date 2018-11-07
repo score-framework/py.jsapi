@@ -25,6 +25,7 @@
 # the Licensee has his registered seat, an establishment or assets.
 
 import abc
+import collections
 import functools
 import inspect
 import json
@@ -156,7 +157,7 @@ class Endpoint(metaclass=abc.ABCMeta):
 
     def __init__(self, name):
         self.name = name
-        self.ops = {}
+        self.ops = collections.OrderedDict()
         self.preroutes = []
 
     def preroute(self, func):

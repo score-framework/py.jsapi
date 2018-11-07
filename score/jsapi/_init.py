@@ -191,7 +191,7 @@ class JsapiTemplateLoader(Loader):
                 ', '.join('require("%s")' % dep for dep in dependencies)
             ))
         elif path == 'score/jsapi/exceptions.js':
-            exceptions = {}
+            exceptions = OrderedDict()
 
             def add_subclasses(cls):
                 parent = cls.__name__
