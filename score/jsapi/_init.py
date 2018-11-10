@@ -1,4 +1,5 @@
 # Copyright © 2015-2018 STRG.AT GmbH, Vienna, Austria
+# Copyright © 2018 Necdet Can Ateşman, Vienna, Austria
 #
 # This file is part of the The SCORE Framework.
 #
@@ -24,6 +25,7 @@
 # the discretion of STRG.AT GmbH also the competent court, in whose district
 # the Licensee has his registered seat, an establishment or assets.
 
+import abc
 import inspect
 import json
 import logging
@@ -42,9 +44,13 @@ from ._endpoint import SafeException, UrlEndpoint
 log = logging.getLogger(__name__)
 
 
+VALID_FORMATS = ('umd', 'es6')
+
+
 defaults = {
     'endpoints': [],
     'expose': False,
+    'js.format': 'umd',
     'serve.outdir': None,
 }
 
@@ -85,8 +91,11 @@ def init(confdict, ctx, tpl, http):
     if conf['serve.outdir'] and not os.path.isdir(conf['serve.outdir']):
         raise ConfigurationError(
             'score.jsapi', 'Configured serve.outdir does not exist')
+    if conf['js.format'] not in VALID_FORMATS:
+        raise ConfigurationError(
+            'score.jsapi', 'Invalid js.format "%s"' % (conf['js.format'],))
     return ConfiguredJsapiModule(ctx, tpl, http, endpoints, expose,
-                                 conf['serve.outdir'])
+                                 conf['js.format'], conf['serve.outdir'])
 
 
 js_keywords = (
@@ -118,6 +127,66 @@ def _make_api(endpoint):
 
 
 class JsapiTemplateLoader(Loader):
+
+    _exceptions_map = None
+
+    def __init__(self, jsapi):
+        self.conf = jsapi
+
+    def iter_paths(self):
+        here = os.path.dirname(__file__)
+        rootdir = os.path.join(here, 'tpl', self.conf.js_format)
+        for base, dirs, files in os.walk(rootdir):
+            dirs.sort()
+            for filename in sorted(files):
+                path = os.path.join(base, filename)
+                yield 'score/jsapi/' + os.path.relpath(path, rootdir)
+        for name in self.conf.endpoints:
+            yield 'score/jsapi/endpoints/%s.js' % (name,)
+        yield 'score/jsapi/exceptions.js'
+        yield 'score/jsapi.js'
+
+    def load(self, path):
+        if path == 'score/jsapi.js':
+            return self.render_jsapi()
+        elif path == 'score/jsapi/exceptions.js':
+            return self.render_exceptions()
+        here = os.path.dirname(__file__)
+        file = os.path.join(here, 'tpl', self.conf.js_format,
+                            path[len('score/jsapi/'):])
+        if os.path.exists(file):
+            return True, file
+        for endpoint in self.conf.endpoints.values():
+            enpoint_path = 'score/jsapi/endpoints/%s.js' % (endpoint.name,)
+            if path == enpoint_path:
+                return False, endpoint.render_js(self.conf)
+        raise TemplateNotFound(path)
+
+    @property
+    def exceptions_map(self):
+        if self._exceptions_map is None:
+            self._exceptions_map = OrderedDict()
+
+            def add_subclasses(cls):
+                parent = cls.__name__
+                if cls == SafeException:
+                    parent = None
+                for exc in cls.__subclasses__():
+                    self._exceptions_map[exc.__name__] = parent
+                    add_subclasses(exc)
+            add_subclasses(SafeException)
+        return self._exceptions_map
+
+    @abc.abstractmethod
+    def render_jsapi(self):
+        pass
+
+    @abc.abstractmethod
+    def render_exceptions(self):
+        pass
+
+
+class JsapiUmdTemplateLoader(JsapiTemplateLoader):
 
     jsapi_template = textwrap.dedent('''
         /* eslint-disable */
@@ -169,52 +238,84 @@ class JsapiTemplateLoader(Loader):
         });
     ''').lstrip()
 
-    def __init__(self, jsapi):
-        self.conf = jsapi
+    def render_jsapi(self):
+        dependencies = ['./jsapi/unified', './jsapi/exceptions'] + [
+            './jsapi/endpoints/%s' % name
+            for name in self.conf.endpoints]
+        return False, (self.jsapi_template % (
+            json.dumps(dependencies),
+            ', '.join('require("%s")' % dep for dep in dependencies)
+        ))
+
+    def render_exceptions(self):
+        return False, (self.exceptions_template % (
+            json.dumps(self.exceptions_map)))
+
+
+class JsapiEs6TemplateLoader(JsapiTemplateLoader):
+
+    jsapi_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
+        import Jsapi from './unified';
+
+        import * as endpoints from './endpoints';
+        import * as exceptions from './exceptions';
+
+        export * from './exceptions';
+
+        export const jsapi = new Jsapi([%s], [%s]);
+
+        export default jsapi;
+    ''').lstrip()
+
+    exceptions_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
+        import Exception from './exception';
+
+        %s
+    ''').lstrip()
+
+    endpoints_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
+        %s
+    ''').lstrip()
 
     def iter_paths(self):
-        here = os.path.dirname(__file__)
-        rootdir = os.path.join(here, 'js')
-        for base, dirs, files in os.walk(rootdir):
-            dirs.sort()
-            for filename in sorted(files):
-                path = os.path.join(base, filename)
-                yield 'score/jsapi/' + os.path.relpath(path, rootdir)
-        for name in self.conf.endpoints:
-            yield 'score/jsapi/endpoints/%s.js' % (name,)
-        yield 'score/jsapi/exceptions.js'
-        yield 'score/jsapi.js'
+        yield from (path for path in super().iter_paths()
+                    if path != 'score/jsapi.js')
+        yield 'score/jsapi/endpoints/index.js'
+        yield 'score/jsapi/index.js'
 
     def load(self, path):
-        if path == 'score/jsapi.js':
-            dependencies = ['./jsapi/unified', './jsapi/exceptions'] + [
-                './jsapi/endpoints/%s' % name
-                for name in self.conf.endpoints]
-            return False, (self.jsapi_template % (
-                json.dumps(dependencies),
-                ', '.join('require("%s")' % dep for dep in dependencies)
-            ))
-        elif path == 'score/jsapi/exceptions.js':
-            exceptions = OrderedDict()
+        if path == 'score/jsapi/index.js':
+            return self.render_jsapi()
+        if path == 'score/jsapi/endpoints/index.js':
+            return self.render_endpoints()
+        return super().load(path)
 
-            def add_subclasses(cls):
-                parent = cls.__name__
-                if cls == SafeException:
-                    parent = None
-                for exc in cls.__subclasses__():
-                    exceptions[exc.__name__] = parent
-                    add_subclasses(exc)
-            add_subclasses(SafeException)
-            return False, (self.exceptions_template % (json.dumps(exceptions)))
-        here = os.path.dirname(__file__)
-        file = os.path.join(here, 'js', path[len('score/jsapi/'):])
-        if os.path.exists(file):
-            return True, file
-        for endpoint in self.conf.endpoints.values():
-            enpoint_path = 'score/jsapi/endpoints/%s.js' % (endpoint.name,)
-            if path == enpoint_path:
-                return False, endpoint.render_js(self.conf)
-        raise TemplateNotFound(path)
+    def render_endpoints(self):
+        return False, (self.endpoints_template % (
+            '\n'.join(
+                'export * from \'./%s\';' % (name,)
+                for name in self.conf.endpoints)))
+
+    def render_jsapi(self):
+        return False, (self.jsapi_template % (
+            ', '.join('endpoints.%s' % (name,)
+                      for name in self.conf.endpoints),
+            ', '.join('exceptions.%s' % (name,)
+                      for name in self.exceptions_map),
+        ))
+
+    def render_exceptions(self):
+        definitions = '\n'.join(
+            'export const %s = Exception.define(%s, %s);' % (
+                name, name, parent if parent else 'null')
+            for name, parent in self.exceptions_map.items())
+        return False, (self.exceptions_template % (definitions))
 
 
 class ConfiguredJsapiModule(ConfiguredModule):
@@ -226,17 +327,22 @@ class ConfiguredJsapiModule(ConfiguredModule):
     configured as `serve.outdir`.
     """
 
-    def __init__(self, ctx, tpl, http, endpoints, expose, serve_outdir):
+    def __init__(self, ctx, tpl, http, endpoints, expose,
+                 js_format, serve_outdir):
         super().__init__(__package__)
         self.ctx = ctx
         self.tpl = tpl
         self.http = http
         self.expose = expose
+        self.js_format = js_format
         self.serve_outdir = serve_outdir
         self.endpoints = OrderedDict()
         for endpoint in endpoints:
             self.add_endpoint(endpoint)
-        self.tpl_loader = JsapiTemplateLoader(self)
+        if js_format == 'umd':
+            self.tpl_loader = JsapiUmdTemplateLoader(self)
+        else:
+            self.tpl_loader = JsapiEs6TemplateLoader(self)
         tpl.loaders['js'].append(self.tpl_loader)
 
     def add_endpoint(self, endpoint):

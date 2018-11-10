@@ -1,4 +1,5 @@
 # Copyright © 2015-2018 STRG.AT GmbH, Vienna, Austria
+# Copyright © 2018 Necdet Can Ateşman, Vienna, Austria
 #
 # This file is part of the The SCORE Framework.
 #
@@ -303,7 +304,7 @@ class UrlEndpoint(Endpoint):
     An Endpoint, which can be accessed via AJAX from javascript.
     """
 
-    template = textwrap.dedent('''
+    umd_template = textwrap.dedent('''
         /* eslint-disable */
         /* tslint:disable */
         // Universal Module Loader
@@ -326,6 +327,16 @@ class UrlEndpoint(Endpoint):
             return new UrlEndpoint("%s", %s, "%s", "%s");
 
         });
+    ''').lstrip()
+
+    es6_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
+        import { UrlEndpoint } from '../endpoint';
+
+        export const %s = new UrlEndpoint("%s", %s, "%s", "%s");
+
+        export default %s;
     ''').lstrip()
 
     def __init__(self, name, *, url=None, method="POST"):
@@ -373,8 +384,14 @@ class UrlEndpoint(Endpoint):
         return responses
 
     def render_js(self, conf):
-        return self.template % (
-            self.name, self._render_ops_js(), self.url, self.method)
+        if self.conf.js_format == 'umd':
+            return self.umd_template % (
+                self.name, self._render_ops_js(), self.url, self.method)
+        assert self.conf.js_format == 'es6'
+        return self.es6_template % (
+            self.name,
+            self.name, self._render_ops_js(), self.url, self.method,
+            self.name)
 
 
 class SafeException(Exception):
