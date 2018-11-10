@@ -120,6 +120,8 @@ def _make_api(endpoint):
 class JsapiTemplateLoader(Loader):
 
     jsapi_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
@@ -141,6 +143,8 @@ class JsapiTemplateLoader(Loader):
     ''').lstrip()
 
     exceptions_template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
