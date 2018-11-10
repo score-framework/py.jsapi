@@ -304,6 +304,8 @@ class UrlEndpoint(Endpoint):
     """
 
     template = textwrap.dedent('''
+        /* eslint-disable */
+        /* tslint:disable */
         // Universal Module Loader
         // https://github.com/umdjs/umd
         // https://github.com/umdjs/umd/blob/v1.0.0/returnExports.js
