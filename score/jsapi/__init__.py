@@ -1,4 +1,4 @@
-# Copyright © 2015-2018 STRG.AT GmbH, Vienna, Austria
+# Copyright © 2015-2017 STRG.AT GmbH, Vienna, Austria
 #
 # This file is part of the The SCORE Framework.
 #
@@ -27,7 +27,7 @@
 from ._init import init, ConfiguredJsapiModule
 from ._endpoint import Endpoint, UrlEndpoint, SafeException
 
-__version__ = '0.4.14'
+__version__ = '0.4.15'
 
 __all__ = ('init', 'ConfiguredJsapiModule', 'Endpoint', 'UrlEndpoint',
            'SafeException')
