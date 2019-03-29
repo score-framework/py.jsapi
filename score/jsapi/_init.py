@@ -312,7 +312,7 @@ class JsapiEs6TemplateLoader(JsapiTemplateLoader):
 
     def render_exceptions(self):
         definitions = '\n'.join(
-            'export const %s = Exception.define(%s, %s);' % (
+            "export const %s = Exception.define('%s', %s);" % (
                 name, name, parent if parent else 'null')
             for name, parent in self.exceptions_map.items())
         return False, (self.exceptions_template % (definitions))
