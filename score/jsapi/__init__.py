@@ -27,7 +27,7 @@
 from ._init import init, ConfiguredJsapiModule
 from ._endpoint import Endpoint, UrlEndpoint, SafeException
 
-__version__ = '0.4.16'
+__version__ = '0.4.17'
 
 __all__ = ('init', 'ConfiguredJsapiModule', 'Endpoint', 'UrlEndpoint',
            'SafeException')
