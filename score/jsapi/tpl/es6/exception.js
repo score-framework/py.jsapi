@@ -36,14 +36,8 @@ export class Exception extends Error {
     static defineCallbacks = [];
 
     static define = function(name, parentName) {
-        const NewException = function(message) {
-            if (parentName) {
-                Exception.classes[parentName].call(this, message);
-            } else {
-                Exception.call(this, message);
-            }
-        };
-        NewException.prototype = Object.create(Exception.prototype);
+        const parent = parentName ? Exception.classes[parentName] : Exception;
+        const NewException = class extends parent {};
         NewException.prototype.name = name;
         Exception.classes[name] = NewException;
         for (let i = 0; i < Exception.defineCallbacks.length; i++)  {
