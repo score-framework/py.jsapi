@@ -57,7 +57,7 @@ export class Jsapi {
             }
         });
         exceptions.forEach(exception => {
-            this._exceptions[exception.name] = exception;
+            this._exceptions[exception.prototype.name] = exception;
         });
     }
 
