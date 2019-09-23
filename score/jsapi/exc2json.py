@@ -1,4 +1,5 @@
 # Copyright © 2015-2018 STRG.AT GmbH, Vienna, Austria
+# Copyright © 2018-2019 Necdet Can Ateşman <can@atesman.at>, Vienna, Austria
 #
 # This file is part of the The SCORE Framework.
 #
@@ -23,6 +24,7 @@
 # competent court, in whose district STRG.AT GmbH has its registered seat, at
 # the discretion of STRG.AT GmbH also the competent court, in whose district
 # the Licensee has his registered seat, an establishment or assets.
+
 
 import traceback
 
