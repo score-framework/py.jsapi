@@ -113,7 +113,9 @@ js_keywords = (
 def _make_api(endpoint):
     def api(ctx):
         if endpoint.method == "POST":
-            assert ctx.http.request.content_type == 'application/json'
+            if ctx.http.request.content_type != 'application/json':
+                ctx.http.response.status = '400 Invalid Content-Type'
+                return ctx.http.response
             requests = json.loads(str(ctx.http.request.body,
                                       ctx.http.request.charset))
         else:
