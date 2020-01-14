@@ -339,10 +339,11 @@ class UrlEndpoint(Endpoint):
         export default %s;
     ''').lstrip()
 
-    def __init__(self, name, *, url=None, method="POST"):
+    def __init__(self, name, *, url=None, method="POST", ctx_members=None):
         super().__init__(name)
         self.url = url or '/jsapi/' + name
         self.method = method
+        self.ctx_members = ctx_members
 
     def handle(self, requests, ctx_members={}):
         """

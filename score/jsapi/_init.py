@@ -121,7 +121,15 @@ def _make_api(endpoint):
         else:
             requests = map(json.loads,
                            ctx.http.request.GET.getall('requests[]'))
-        results = endpoint.handle(requests, {'http': ctx.http})
+        ctx_members = {'http': ctx.http}
+        if endpoint.ctx_members:
+            if callable(endpoint.ctx_members):
+                ctx_members.update(endpoint.ctx_members(ctx))
+            else:
+                for member in endpoint.ctx_members:
+                    if hasattr(ctx, member):
+                        ctx_members[member] = getattr(ctx, member)
+        results = endpoint.handle(requests, ctx_members)
         ctx.http.response.content_type = 'application/json; charset=UTF-8'
         ctx.http.response.json = results
         return ctx.http.response
