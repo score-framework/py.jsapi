@@ -97,8 +97,8 @@ export class Queue {
             return endpoint.send(payload).then(function(responses) {
                 for (let i = 0; i < responses.length; i++) {
                     const response = responses[i],
-                        success = response.success,
-                        result = response.result;
+                        success = response.success;
+                    let result = response.result;
                     if (success) {
                         requests[i].resolve(result);
                     } else {
